@@ -45,7 +45,7 @@ class MainWindow(ctk.CTk):
         # --- Language Dictionary ---
         self.texts = {
             "en": {
-                "title": "Merge Excle Tool Pro By Paa Top IT",
+                "title": "Merge Excel Pro - By Paa Top IT",
                 "add_file": "Add Files", "add_folder": "Add Folder", "clear": "Clear List",
                 "merge": "MERGE FILES", "open_dir": "Open Folder",
                 "status_ready": "Ready...", "status_done": "Done! Saved at:", "status_processing": "Processing...",
@@ -53,18 +53,18 @@ class MainWindow(ctk.CTk):
                 "lang_label": "Language:"
             },
             "th": {
-                "title": "โปรแกรมรวมไฟล์ (รุ่น DDD)",
+                "title": "โปรแกรมรวมไฟล์ Excel Pro - By Paa Top IT ",
                 "add_file": "เพิ่มไฟล์", "add_folder": "เพิ่มโฟลเดอร์", "clear": "ล้างรายการ",
                 "merge": "เริ่มรวมไฟล์", "open_dir": "เปิดที่เก็บไฟล์",
                 "status_ready": "พร้อมทำงาน...", "status_done": "เรียบร้อย! บันทึกที่:", "status_processing": "กำลังทำงาน...",
                 "msg_no_file": "กรุณาเลือกไฟล์ก่อนครับ!", "msg_success": "เรียบร้อย!",
                 "lang_label": "ภาษา:"
             },
-            "cn": { "title": "Merge Tool", "add_file": "Add", "add_folder": "Folder", "clear": "Clear", "merge": "Merge", "open_dir": "Open", "status_ready": "Ready", "status_done": "Done", "status_processing": "Processing", "msg_no_file": "No File", "msg_success": "Success", "lang_label": "Lang" }
+            "cn": { "title": "Merge Excel Pro", "add_file": "Add", "add_folder": "Folder", "clear": "Clear", "merge": "Merge", "open_dir": "Open", "status_ready": "Ready", "status_done": "Done", "status_processing": "Processing", "msg_no_file": "No File", "msg_success": "Success", "lang_label": "Lang" }
         }
 
         # --- UI Layout ---
-        self.title("Excel & CSV Merger Pro - By Paa Top IT")
+        self.title("Merge Excel Pro - By Paa Top IT")
         self.geometry("750x600")
         self.grid_rowconfigure(0, weight=0)
         self.grid_rowconfigure(1, weight=1)
