@@ -1,6 +1,5 @@
 # File: src/application/services.py
-import pandas as pd
-from typing import List
+from typing import List, Any
 from src.application.interfaces import ILogger, ISheetReader
 from src.domain.entities import SourceFile
 
@@ -10,7 +9,8 @@ class MergeService:
         self.logger = logger
         self.reader = reader
     
-    def merge(self, files: List[SourceFile]) -> pd.DataFrame:
+    def merge(self, files: List[SourceFile]) -> Any:
+        import pandas as pd
         self.logger.info("Starting merge process")
         
         all_data_frames = []

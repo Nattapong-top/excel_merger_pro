@@ -20,6 +20,7 @@ PyInstaller.__main__.run([
     '--windowed',                       # ไม่ต้องโชว์จอดำ (Console)
     '--clean',                          # ล้าง cache เก่าก่อนทำ
     f'--add-data={ctk_path}{os.pathsep}customtkinter', # ยัดไส้ CustomTkinter เข้าไป
+    '--splash=splash.png',
     
     # (Optional) ถ้าป๋ามีไอคอน .ico ให้เปิดบรรทัดล่างแล้วแก้ชื่อไฟล์
     # '--icon=my_logo.ico',
