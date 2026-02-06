@@ -13,7 +13,7 @@ from src.domain.entities import SourceFile
 from src.infrastructure.excel_reader import PandasSheetReader
 from src.infrastructure.gui_logger import GuiLogger
 from src.application.services import MergeService
-from src.ui.dialogs import SheetSelectionDialog
+from src.ui.dialogs import SheetSelectionDialog, MultiFileSheetSelectionDialog
 from src.application.interfaces import ILogger
 
 ctk.set_appearance_mode("System")
@@ -151,32 +151,72 @@ class MainWindow(ctk.CTk):
 
         def load_files():
             self.status_label.configure(text="Scanning files...")
+            files_data = {}  # {file_path: [SheetName1, SheetName2, ...]}
+            
             for path_str in file_paths:
                 try:
                     path = FilePath(path_str)
                     sheets = self.reader.get_sheet_names(path)
-                    
-                    # กลับไป Main Thread เพื่อเปิด Dialog
-                    self.after(0, lambda p=path_str, s=sheets: self.show_selection_dialog(p, s))
+                    files_data[path_str] = sheets
                 except Exception as e:
                     print(f"Error: {e}")
+            
+            if files_data:
+                # แสดง Dialog เดียวสำหรับทุกไฟล์
+                self.after(0, lambda: self.show_multi_file_selection_dialog(files_data))
+            
             self.after(0, lambda: self.status_label.configure(text="Ready..."))
 
         threading.Thread(target=load_files, daemon=True).start()
 
-    def show_selection_dialog(self, path_str, sheets):
-        dialog = SheetSelectionDialog(self, os.path.basename(path_str), sheets)
-        selected = dialog.get_selected()
+    def show_multi_file_selection_dialog(self, files_data):
+        """แสดง Dialog สำหรับเลือก Sheet จากหลายไฟล์พร้อมกัน"""
+        dialog = MultiFileSheetSelectionDialog(self, files_data)
+        selected_data = dialog.get_selected()
         
-        if selected:
-            source_file = SourceFile(FilePath(path_str), sheets)
-            for s in selected:
-                source_file.select_sheet(s)
+        # เพิ่มไฟล์ที่เลือกเข้าไปใน source_files
+        for file_path, selected_sheets in selected_data.items():
+            path = FilePath(file_path)
+            all_sheets = files_data[file_path]
+            
+            source_file = SourceFile(path, all_sheets)
+            for sheet in selected_sheets:
+                source_file.select_sheet(sheet)
+            
             self.source_files.append(source_file)
-            self.update_file_list_ui()
+        
+        self.update_file_list_ui()
 
     def add_folder_action(self):
-        messagebox.showinfo("Info", "Coming soon in next update!")
+        folder_path = filedialog.askdirectory(title="Select Folder")
+        if not folder_path: return
+
+        def scan_folder():
+            self.status_label.configure(text="Scanning folder...")
+            files_data = {}  # {file_path: [SheetName1, SheetName2, ...]}
+            
+            # สแกนหาไฟล์ Excel ทั้งหมดในโฟลเดอร์ (รวม subfolder)
+            for root, dirs, files in os.walk(folder_path):
+                for file in files:
+                    if file.endswith(('.xlsx', '.xls')):
+                        full_path = os.path.join(root, file)
+                        try:
+                            path = FilePath(full_path)
+                            sheets = self.reader.get_sheet_names(path)
+                            files_data[full_path] = sheets
+                        except Exception as e:
+                            print(f"Error loading {full_path}: {e}")
+            
+            if not files_data:
+                self.after(0, lambda: messagebox.showinfo("Info", f"No Excel files found in:\n{folder_path}"))
+                self.after(0, lambda: self.status_label.configure(text="Ready..."))
+                return
+            
+            # แสดง Dialog เดียวสำหรับทุกไฟล์
+            self.after(0, lambda: self.show_multi_file_selection_dialog(files_data))
+            self.after(0, lambda: self.status_label.configure(text=f"Loaded {len(files_data)} files from folder"))
+
+        threading.Thread(target=scan_folder, daemon=True).start()
 
     def clear_action(self):
         self.source_files = []
