@@ -235,7 +235,7 @@ class MainWindow(ctk.CTk):
             return
 
         # 1. Show processing options dialog
-        options_dialog = ProcessingOptionsDialog(self)
+        options_dialog = ProcessingOptionsDialog(self, lang_code=self.lang_code)
         self.wait_window(options_dialog)
         
         options = options_dialog.get_result()

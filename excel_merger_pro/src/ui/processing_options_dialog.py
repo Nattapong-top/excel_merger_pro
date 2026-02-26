@@ -29,23 +29,91 @@ class ProcessingOptionsDialog(ctk.CTkToplevel):
     - Expandable sections for configuration
     - Input validation
     - OK/Cancel buttons
+    - Multi-language support
     """
     
-    def __init__(self, parent, available_columns: List[str] = None):
+    # Language texts
+    TEXTS = {
+        "en": {
+            "title": "Processing Options",
+            "configure": "Configure Processing Options",
+            "performance": "Performance Optimization",
+            "chunked": "Enable chunked reading for large files (>100MB)",
+            "chunk_size": "Chunk size:",
+            "rows": "rows",
+            "parallel": "Enable parallel processing",
+            "max_workers": "Max workers:",
+            "threads": "threads",
+            "data_processing": "Data Processing (Optional)",
+            "note": "Note: These features will be available after initial merge",
+            "groupby": "Group by columns (Coming soon)",
+            "duplicates": "Remove duplicates (Coming soon)",
+            "columns": "Select/reorder columns (Coming soon)",
+            "ok": "OK",
+            "cancel": "Cancel",
+            "error_title": "Invalid Input",
+            "error_msg": "Invalid configuration:"
+        },
+        "th": {
+            "title": "ตัวเลือกการประมวลผล",
+            "configure": "กำหนดค่าตัวเลือกการประมวลผล",
+            "performance": "การเพิ่มประสิทธิภาพ",
+            "chunked": "เปิดใช้การอ่านแบบแบ่งส่วนสำหรับไฟล์ขนาดใหญ่ (>100MB)",
+            "chunk_size": "ขนาดส่วน:",
+            "rows": "แถว",
+            "parallel": "เปิดใช้การประมวลผลแบบขนาน",
+            "max_workers": "จำนวน workers สูงสุด:",
+            "threads": "threads",
+            "data_processing": "การประมวลผลข้อมูล (ตัวเลือก)",
+            "note": "หมายเหตุ: ฟีเจอร์เหล่านี้จะพร้อมใช้งานหลังจากรวมไฟล์เบื้องต้น",
+            "groupby": "จัดกลุ่มตามคอลัมน์ (เร็วๆ นี้)",
+            "duplicates": "ลบข้อมูลซ้ำ (เร็วๆ นี้)",
+            "columns": "เลือก/จัดเรียงคอลัมน์ (เร็วๆ นี้)",
+            "ok": "ตกลง",
+            "cancel": "ยกเลิก",
+            "error_title": "ข้อมูลไม่ถูกต้อง",
+            "error_msg": "การตั้งค่าไม่ถูกต้อง:"
+        },
+        "cn": {
+            "title": "处理选项",
+            "configure": "配置处理选项",
+            "performance": "性能优化",
+            "chunked": "启用大文件分块读取 (>100MB)",
+            "chunk_size": "块大小:",
+            "rows": "行",
+            "parallel": "启用并行处理",
+            "max_workers": "最大工作线程:",
+            "threads": "线程",
+            "data_processing": "数据处理（可选）",
+            "note": "注意：这些功能将在初始合并后可用",
+            "groupby": "按列分组（即将推出）",
+            "duplicates": "删除重复项（即将推出）",
+            "columns": "选择/重新排序列（即将推出）",
+            "ok": "确定",
+            "cancel": "取消",
+            "error_title": "输入无效",
+            "error_msg": "配置无效:"
+        }
+    }
+    
+    def __init__(self, parent, available_columns: List[str] = None, lang_code: str = "en"):
         """
         Initialize processing options dialog
         
         Args:
             parent: Parent window
             available_columns: List of available column names (for processors)
+            lang_code: Language code (en, th, cn)
         """
         super().__init__(parent)
         
         self.available_columns = available_columns or []
         self.result: Optional[ProcessingOptions] = None
+        self.lang_code = lang_code
+        self.texts = self.TEXTS.get(lang_code, self.TEXTS["en"])
         
         # Window configuration
-        self.title("Processing Options")
+        self.title(self.texts["title"])
         self.geometry("600x700")
         self.resizable(False, False)
         
@@ -70,7 +138,7 @@ class ProcessingOptionsDialog(ctk.CTkToplevel):
         # Title
         title_label = ctk.CTkLabel(
             main_frame,
-            text="Configure Processing Options",
+            text=self.texts["configure"],
             font=("Arial", 16, "bold")
         )
         title_label.pack(pady=(0, 20))
@@ -87,7 +155,7 @@ class ProcessingOptionsDialog(ctk.CTkToplevel):
         
         self.ok_button = ctk.CTkButton(
             button_frame,
-            text="OK",
+            text=self.texts["ok"],
             command=self._on_ok,
             width=120
         )
@@ -95,7 +163,7 @@ class ProcessingOptionsDialog(ctk.CTkToplevel):
         
         cancel_button = ctk.CTkButton(
             button_frame,
-            text="Cancel",
+            text=self.texts["cancel"],
             command=self._on_cancel,
             width=120,
             fg_color="gray",
@@ -111,7 +179,7 @@ class ProcessingOptionsDialog(ctk.CTkToplevel):
         # Section title
         ctk.CTkLabel(
             section_frame,
-            text="Performance Optimization",
+            text=self.texts["performance"],
             font=("Arial", 14, "bold")
         ).pack(anchor="w", padx=10, pady=(10, 5))
         
@@ -119,7 +187,7 @@ class ProcessingOptionsDialog(ctk.CTkToplevel):
         self.chunking_var = ctk.BooleanVar(value=False)
         chunking_check = ctk.CTkCheckBox(
             section_frame,
-            text="Enable chunked reading for large files (>100MB)",
+            text=self.texts["chunked"],
             variable=self.chunking_var
         )
         chunking_check.pack(anchor="w", padx=20, pady=5)
@@ -128,17 +196,17 @@ class ProcessingOptionsDialog(ctk.CTkToplevel):
         chunk_frame = ctk.CTkFrame(section_frame)
         chunk_frame.pack(fill="x", padx=30, pady=5)
         
-        ctk.CTkLabel(chunk_frame, text="Chunk size:").pack(side="left", padx=5)
+        ctk.CTkLabel(chunk_frame, text=self.texts["chunk_size"]).pack(side="left", padx=5)
         self.chunk_size_entry = ctk.CTkEntry(chunk_frame, width=100)
         self.chunk_size_entry.insert(0, "10000")
         self.chunk_size_entry.pack(side="left", padx=5)
-        ctk.CTkLabel(chunk_frame, text="rows").pack(side="left", padx=5)
+        ctk.CTkLabel(chunk_frame, text=self.texts["rows"]).pack(side="left", padx=5)
         
         # Parallel processing
         self.parallel_var = ctk.BooleanVar(value=True)
         parallel_check = ctk.CTkCheckBox(
             section_frame,
-            text="Enable parallel processing",
+            text=self.texts["parallel"],
             variable=self.parallel_var
         )
         parallel_check.pack(anchor="w", padx=20, pady=5)
@@ -147,11 +215,11 @@ class ProcessingOptionsDialog(ctk.CTkToplevel):
         worker_frame = ctk.CTkFrame(section_frame)
         worker_frame.pack(fill="x", padx=30, pady=(5, 10))
         
-        ctk.CTkLabel(worker_frame, text="Max workers:").pack(side="left", padx=5)
+        ctk.CTkLabel(worker_frame, text=self.texts["max_workers"]).pack(side="left", padx=5)
         self.max_workers_entry = ctk.CTkEntry(worker_frame, width=100)
         self.max_workers_entry.insert(0, "4")
         self.max_workers_entry.pack(side="left", padx=5)
-        ctk.CTkLabel(worker_frame, text="threads").pack(side="left", padx=5)
+        ctk.CTkLabel(worker_frame, text=self.texts["threads"]).pack(side="left", padx=5)
     
     def _create_data_processing_section(self, parent):
         """Create data processing section"""
@@ -161,14 +229,14 @@ class ProcessingOptionsDialog(ctk.CTkToplevel):
         # Section title
         ctk.CTkLabel(
             section_frame,
-            text="Data Processing (Optional)",
+            text=self.texts["data_processing"],
             font=("Arial", 14, "bold")
         ).pack(anchor="w", padx=10, pady=(10, 5))
         
         # Note
         ctk.CTkLabel(
             section_frame,
-            text="Note: These features will be available after initial merge",
+            text=self.texts["note"],
             font=("Arial", 10),
             text_color="gray"
         ).pack(anchor="w", padx=20, pady=5)
@@ -177,7 +245,7 @@ class ProcessingOptionsDialog(ctk.CTkToplevel):
         self.groupby_var = ctk.BooleanVar(value=False)
         groupby_check = ctk.CTkCheckBox(
             section_frame,
-            text="Group by columns (Coming soon)",
+            text=self.texts["groupby"],
             variable=self.groupby_var,
             state="disabled"
         )
@@ -187,7 +255,7 @@ class ProcessingOptionsDialog(ctk.CTkToplevel):
         self.duplicate_var = ctk.BooleanVar(value=False)
         duplicate_check = ctk.CTkCheckBox(
             section_frame,
-            text="Remove duplicates (Coming soon)",
+            text=self.texts["duplicates"],
             variable=self.duplicate_var,
             state="disabled"
         )
@@ -197,7 +265,7 @@ class ProcessingOptionsDialog(ctk.CTkToplevel):
         self.column_var = ctk.BooleanVar(value=False)
         column_check = ctk.CTkCheckBox(
             section_frame,
-            text="Select/reorder columns (Coming soon)",
+            text=self.texts["columns"],
             variable=self.column_var,
             state="disabled"
         )
@@ -226,18 +294,18 @@ class ProcessingOptionsDialog(ctk.CTkToplevel):
         except ValueError as e:
             # Show error message
             error_dialog = ctk.CTkToplevel(self)
-            error_dialog.title("Invalid Input")
+            error_dialog.title(self.texts["error_title"])
             error_dialog.geometry("300x150")
             
             ctk.CTkLabel(
                 error_dialog,
-                text=f"Invalid configuration:\n{str(e)}",
+                text=f"{self.texts['error_msg']}\n{str(e)}",
                 wraplength=250
             ).pack(pady=20)
             
             ctk.CTkButton(
                 error_dialog,
-                text="OK",
+                text=self.texts["ok"],
                 command=error_dialog.destroy
             ).pack(pady=10)
     
