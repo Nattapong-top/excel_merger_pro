@@ -78,12 +78,50 @@ class SheetSelectionDialog(ctk.CTkToplevel):
 class MultiFileSheetSelectionDialog(ctk.CTkToplevel):
     """Dialog สำหรับเลือก Sheet จากหลายไฟล์พร้อมกัน"""
     
-    def __init__(self, parent, files_data: Dict[str, List[SheetName]]):
+    TEXTS = {
+        "en": {
+            "title": "Select Sheets from {count} Files",
+            "found": "Found {count} Excel files",
+            "hint": "Select sheets to merge from each file:",
+            "select_all": "Select All",
+            "unselect_all": "Unselect All",
+            "all": "All",
+            "none": "None",
+            "confirm": "Confirm Selection"
+        },
+        "th": {
+            "title": "เลือก Sheet จาก {count} ไฟล์",
+            "found": "พบ {count} ไฟล์ Excel",
+            "hint": "เลือก Sheet ที่จะรวมจากแต่ละไฟล์:",
+            "select_all": "เลือกทั้งหมด",
+            "unselect_all": "ยกเลิกทั้งหมด",
+            "all": "ทั้งหมด",
+            "none": "ไม่เลือก",
+            "confirm": "ยืนยันการเลือก"
+        },
+        "cn": {
+            "title": "从 {count} 个文件中选择工作表",
+            "found": "找到 {count} 个Excel文件",
+            "hint": "从每个文件中选择要合并的工作表:",
+            "select_all": "全选",
+            "unselect_all": "取消全选",
+            "all": "全部",
+            "none": "无",
+            "confirm": "确认选择"
+        }
+    }
+    
+    def __init__(self, parent, files_data: Dict[str, List[SheetName]], lang_code: str = "en"):
         """
         files_data: Dict[file_path, List[SheetName]]
+        lang_code: Language code (en, th, cn)
         """
         super().__init__(parent)
-        self.title(f"Select Sheets from {len(files_data)} Files")
+        
+        self.lang_code = lang_code
+        self.texts = self.TEXTS.get(lang_code, self.TEXTS["en"])
+        
+        self.title(self.texts["title"].format(count=len(files_data)))
         self.geometry("600x700")
         
         self.grab_set()
@@ -94,24 +132,24 @@ class MultiFileSheetSelectionDialog(ctk.CTkToplevel):
         self.selected_data = {}  # {file_path: [SheetName1, SheetName2, ...]}
 
         # Header
-        lbl = ctk.CTkLabel(self, text=f"Found {len(files_data)} Excel files", 
+        lbl = ctk.CTkLabel(self, text=self.texts["found"].format(count=len(files_data)), 
                           font=("Arial", 16, "bold"))
         lbl.pack(pady=(15, 5))
         
-        lbl_hint = ctk.CTkLabel(self, text="Select sheets to merge from each file:")
+        lbl_hint = ctk.CTkLabel(self, text=self.texts["hint"])
         lbl_hint.pack(pady=5)
 
         # Global Actions
         action_frame = ctk.CTkFrame(self, fg_color="transparent")
         action_frame.pack(pady=5, fill="x", padx=20)
 
-        btn_select_all = ctk.CTkButton(action_frame, text="Select All", 
+        btn_select_all = ctk.CTkButton(action_frame, text=self.texts["select_all"], 
                                        width=120, height=30,
                                        fg_color="#3B8ED0",
                                        command=self.select_all_action)
         btn_select_all.pack(side="left", padx=5, expand=True)
 
-        btn_deselect_all = ctk.CTkButton(action_frame, text="Unselect All", 
+        btn_deselect_all = ctk.CTkButton(action_frame, text=self.texts["unselect_all"], 
                                          width=120, height=30,
                                          fg_color="gray",
                                          command=self.deselect_all_action)
@@ -126,7 +164,7 @@ class MultiFileSheetSelectionDialog(ctk.CTkToplevel):
             self.create_file_section(scroll_frame, file_path, sheet_names)
 
         # Confirm Button
-        btn_ok = ctk.CTkButton(self, text="Confirm Selection", 
+        btn_ok = ctk.CTkButton(self, text=self.texts["confirm"], 
                               command=self.on_confirm, 
                               height=45, 
                               font=("Arial", 15, "bold"),
@@ -153,11 +191,11 @@ class MultiFileSheetSelectionDialog(ctk.CTkToplevel):
         btn_frame = ctk.CTkFrame(header_frame, fg_color="transparent")
         btn_frame.pack(side="right")
 
-        btn_sel = ctk.CTkButton(btn_frame, text="All", width=50, height=25,
+        btn_sel = ctk.CTkButton(btn_frame, text=self.texts["all"], width=50, height=25,
                                command=lambda fp=file_path: self.select_file_sheets(fp))
         btn_sel.pack(side="left", padx=2)
 
-        btn_unsel = ctk.CTkButton(btn_frame, text="None", width=50, height=25,
+        btn_unsel = ctk.CTkButton(btn_frame, text=self.texts["none"], width=50, height=25,
                                  fg_color="gray",
                                  command=lambda fp=file_path: self.deselect_file_sheets(fp))
         btn_unsel.pack(side="left", padx=2)

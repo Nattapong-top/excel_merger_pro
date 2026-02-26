@@ -46,7 +46,7 @@ class ProcessingOptionsDialog(ctk.CTkToplevel):
             "threads": "threads",
             "data_processing": "Data Processing (Optional)",
             "note": "Note: These features will be available after initial merge",
-            "groupby": "Group by columns (Coming soon)",
+            "groupby": "Group by columns",
             "duplicates": "Remove duplicates (Coming soon)",
             "columns": "Select/reorder columns (Coming soon)",
             "ok": "OK",
@@ -66,7 +66,7 @@ class ProcessingOptionsDialog(ctk.CTkToplevel):
             "threads": "threads",
             "data_processing": "การประมวลผลข้อมูล (ตัวเลือก)",
             "note": "หมายเหตุ: ฟีเจอร์เหล่านี้จะพร้อมใช้งานหลังจากรวมไฟล์เบื้องต้น",
-            "groupby": "จัดกลุ่มตามคอลัมน์ (เร็วๆ นี้)",
+            "groupby": "จัดกลุ่มตามคอลัมน์",
             "duplicates": "ลบข้อมูลซ้ำ (เร็วๆ นี้)",
             "columns": "เลือก/จัดเรียงคอลัมน์ (เร็วๆ นี้)",
             "ok": "ตกลง",
@@ -86,7 +86,7 @@ class ProcessingOptionsDialog(ctk.CTkToplevel):
             "threads": "线程",
             "data_processing": "数据处理（可选）",
             "note": "注意：这些功能将在初始合并后可用",
-            "groupby": "按列分组（即将推出）",
+            "groupby": "按列分组",
             "duplicates": "删除重复项（即将推出）",
             "columns": "选择/重新排序列（即将推出）",
             "ok": "确定",
@@ -241,15 +241,29 @@ class ProcessingOptionsDialog(ctk.CTkToplevel):
             text_color="gray"
         ).pack(anchor="w", padx=20, pady=5)
         
-        # Group by (disabled for now)
+        # Group by (NOW ENABLED!)
         self.groupby_var = ctk.BooleanVar(value=False)
+        self.groupby_config = None
+        
+        groupby_frame = ctk.CTkFrame(section_frame)
+        groupby_frame.pack(fill="x", padx=20, pady=5)
+        
         groupby_check = ctk.CTkCheckBox(
-            section_frame,
-            text=self.texts["groupby"],
+            groupby_frame,
+            text=self.texts["groupby"].replace(" (Coming soon)", ""),
             variable=self.groupby_var,
+            command=self._on_groupby_toggle
+        )
+        groupby_check.pack(side="left")
+        
+        self.groupby_config_btn = ctk.CTkButton(
+            groupby_frame,
+            text="⚙️ Configure" if self.lang_code == "en" else "⚙️ ตั้งค่า" if self.lang_code == "th" else "⚙️ 配置",
+            command=self._configure_groupby,
+            width=100,
             state="disabled"
         )
-        groupby_check.pack(anchor="w", padx=20, pady=5)
+        self.groupby_config_btn.pack(side="left", padx=10)
         
         # Duplicate removal (disabled for now)
         self.duplicate_var = ctk.BooleanVar(value=False)
@@ -271,6 +285,43 @@ class ProcessingOptionsDialog(ctk.CTkToplevel):
         )
         column_check.pack(anchor="w", padx=20, pady=(5, 10))
     
+    def _on_groupby_toggle(self):
+        """Handle group by checkbox toggle"""
+        if self.groupby_var.get():
+            self.groupby_config_btn.configure(state="normal")
+        else:
+            self.groupby_config_btn.configure(state="disabled")
+            self.groupby_config = None
+    
+    def _configure_groupby(self):
+        """Open group by configuration dialog"""
+        if not self.available_columns:
+            # Show error - no columns available
+            error_dialog = ctk.CTkToplevel(self)
+            error_dialog.title("Error" if self.lang_code == "en" else "ข้อผิดพลาด" if self.lang_code == "th" else "错误")
+            error_dialog.geometry("350x120")
+            
+            msg = "Could not read columns from files.\nPlease check your Excel files." if self.lang_code == "en" else \
+                  "ไม่สามารถอ่านคอลัมน์จากไฟล์ได้\nกรุณาตรวจสอบไฟล์ Excel" if self.lang_code == "th" else \
+                  "无法从文件中读取列。\n请检查您的Excel文件。"
+            
+            ctk.CTkLabel(error_dialog, text=msg, wraplength=300).pack(pady=20)
+            ctk.CTkButton(
+                error_dialog, 
+                text="OK" if self.lang_code == "en" else "ตกลง" if self.lang_code == "th" else "确定", 
+                command=error_dialog.destroy
+            ).pack()
+            return
+        
+        from src.ui.groupby_dialog import GroupByConfigDialog
+        
+        dialog = GroupByConfigDialog(self, self.available_columns, self.lang_code)
+        self.wait_window(dialog)
+        
+        config = dialog.get_result()
+        if config:
+            self.groupby_config = config
+    
     def _on_ok(self):
         """Handle OK button click"""
         try:
@@ -283,7 +334,7 @@ class ProcessingOptionsDialog(ctk.CTkToplevel):
                 chunk_size=chunk_size,
                 enable_parallel=self.parallel_var.get(),
                 max_workers=max_workers,
-                group_by_config=None,  # Not implemented yet
+                group_by_config=self.groupby_config if self.groupby_var.get() else None,
                 duplicate_removal_config=None,  # Not implemented yet
                 column_selection_config=None  # Not implemented yet
             )

@@ -64,7 +64,14 @@ class MainWindow(ctk.CTk):
                 "msg_no_file": "กรุณาเลือกไฟล์ก่อนครับ!", "msg_success": "เรียบร้อย!",
                 "lang_label": "ภาษา:"
             },
-            "cn": { "title": "Merge Excel Pro", "add_file": "Add", "add_folder": "Folder", "clear": "Clear", "merge": "Merge", "open_dir": "Open", "status_ready": "Ready", "status_done": "Done", "status_processing": "Processing", "msg_no_file": "No File", "msg_success": "Success", "lang_label": "Lang" }
+            "cn": {
+                "title": "合并Excel专业版 - By Paa Top IT",
+                "add_file": "添加文件", "add_folder": "添加文件夹", "clear": "清除列表",
+                "merge": "合并文件", "open_dir": "打开文件夹",
+                "status_ready": "准备就绪...", "status_done": "完成！保存在:", "status_processing": "处理中...",
+                "msg_no_file": "请先选择文件！", "msg_success": "成功！",
+                "lang_label": "语言:"
+            }
         }
 
         # --- UI Layout ---
@@ -175,7 +182,7 @@ class MainWindow(ctk.CTk):
 
     def show_multi_file_selection_dialog(self, files_data):
         """แสดง Dialog สำหรับเลือก Sheet จากหลายไฟล์พร้อมกัน"""
-        dialog = MultiFileSheetSelectionDialog(self, files_data)
+        dialog = MultiFileSheetSelectionDialog(self, files_data, lang_code=self.lang_code)
         selected_data = dialog.get_selected()
         
         # เพิ่มไฟล์ที่เลือกเข้าไปใน source_files
@@ -234,8 +241,31 @@ class MainWindow(ctk.CTk):
             messagebox.showwarning("Warning", t["msg_no_file"])
             return
 
-        # 1. Show processing options dialog
-        options_dialog = ProcessingOptionsDialog(self, lang_code=self.lang_code)
+        # 1. Read columns from first file's first sheet
+        available_columns = []
+        try:
+            first_file = self.source_files[0]
+            if first_file.selected_sheets:
+                first_sheet = first_file.selected_sheets[0]
+                # Read just the header (first row)
+                import pandas as pd
+                df_header = pd.read_excel(
+                    first_file.path.value,
+                    sheet_name=first_sheet.value,
+                    nrows=0,  # Read only header
+                    engine='openpyxl'
+                )
+                available_columns = list(df_header.columns)
+        except Exception as e:
+            print(f"Warning: Could not read columns from first file: {e}")
+            available_columns = []
+
+        # 2. Show processing options dialog with available columns
+        options_dialog = ProcessingOptionsDialog(
+            self, 
+            available_columns=available_columns,
+            lang_code=self.lang_code
+        )
         self.wait_window(options_dialog)
         
         options = options_dialog.get_result()

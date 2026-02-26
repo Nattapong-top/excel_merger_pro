@@ -43,17 +43,47 @@ class GroupByProcessor(IDataProcessor):
         Returns:
             Grouped and aggregated DataFrame
         """
-        # Group by specified columns
-        grouped = df.groupby(list(self.config.group_columns))
+        import pandas as pd
+        import numpy as np
         
-        # Build aggregation dict for columns that exist
+        # Group by specified columns
+        group_cols = list(self.config.group_columns)
+        
+        # Separate aggregations for group columns and other columns
         agg_dict = {}
+        count_column = None
+        
         for col, func in self.config.aggregations.items():
             if col in df.columns:
-                agg_dict[col] = func
+                if col in group_cols:
+                    # If aggregating a group column, we'll use size() to count rows
+                    count_column = col
+                else:
+                    # Try to convert to numeric if using numeric aggregation
+                    if func in ['sum', 'mean', 'min', 'max']:
+                        # Try to convert to numeric, coerce errors to NaN
+                        df[col] = pd.to_numeric(df[col], errors='coerce')
+                    
+                    agg_dict[col] = func
         
-        # Apply aggregations and reset index
-        result = grouped.agg(agg_dict).reset_index()
+        # Perform grouping
+        grouped = df.groupby(group_cols, as_index=False)
+        
+        if agg_dict:
+            # Apply aggregations to non-group columns
+            result = grouped.agg(agg_dict)
+        else:
+            # No aggregations, just get first row of each group
+            result = grouped.first()
+        
+        # If user wanted to count rows in each group
+        if count_column:
+            # Add count column
+            count_result = df.groupby(group_cols).size().reset_index(name=f'{count_column}_count')
+            if not result.empty:
+                result = result.merge(count_result, on=group_cols, how='left')
+            else:
+                result = count_result
         
         return result
     
