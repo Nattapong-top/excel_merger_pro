@@ -14,7 +14,11 @@ from src.infrastructure.excel_reader import PandasSheetReader
 from src.infrastructure.gui_logger import GuiLogger
 from src.application.services import MergeService
 from src.ui.dialogs import SheetSelectionDialog, MultiFileSheetSelectionDialog
+from src.ui.processing_options_dialog import ProcessingOptionsDialog
+from src.ui.progress_dialog import ProgressDialog
 from src.application.interfaces import ILogger
+from src.infrastructure.progress_tracker import ThreadSafeProgressTracker
+from src.domain.processing_options import ProcessingOptions
 
 ctk.set_appearance_mode("System")
 ctk.set_default_color_theme("blue")
@@ -230,20 +234,30 @@ class MainWindow(ctk.CTk):
             messagebox.showwarning("Warning", t["msg_no_file"])
             return
 
-        # 1. ตั้งชื่อไฟล์อัตโนมัติ
+        # 1. Show processing options dialog
+        options_dialog = ProcessingOptionsDialog(self)
+        self.wait_window(options_dialog)
+        
+        options = options_dialog.get_result()
+        if options is None:
+            # User cancelled
+            return
+
+        # 2. Auto-generate filename
         first_file_name = os.path.basename(self.source_files[0].path.value).split('.')[0]
         timestamp = datetime.now().strftime("%Y%m%d_%H%M")
         default_name = f"merge_{first_file_name}_{timestamp}.xlsx"
 
-        # 2. ถามที่เซฟ
+        # 3. Ask save location
         save_path = filedialog.asksaveasfilename(
             defaultextension=".xlsx",
             filetypes=[("Excel Files", "*.xlsx")],
             initialfile=default_name
         )
-        if not save_path: return
+        if not save_path:
+            return
 
-        # 3. เตรียมหน้าจอสำหรับ Log (เคลียร์รายชื่อไฟล์ออก)
+        # 4. Prepare UI for processing
         self.file_list_display.configure(state="normal")
         self.file_list_display.delete("0.0", "end")
         self.file_list_display.insert("0.0", "--- STARTING MERGE PROCESS ---\n\n")
@@ -252,33 +266,94 @@ class MainWindow(ctk.CTk):
         self.btn_merge.configure(state="disabled", text="Processing...")
         self.status_label.configure(text=t["status_processing"])
 
-        # 4. Thread ทำงาน
+        # 5. Create progress tracker and dialog
+        progress_tracker = ThreadSafeProgressTracker()
+        progress_dialog = ProgressDialog(self, progress_tracker, title="Merging Files")
+
+        # 6. Run merge in background thread
         def run():
             try:
-                # *** สร้าง Logger จริง เสียบเข้าหน้าจอ ***
+                # Create GUI logger
                 real_logger = GuiLogger(self.file_list_display)
-                self.service.logger = real_logger
                 
-                # เริ่มรวมไฟล์
-                result_df = self.service.merge(self.source_files)
+                # Create service with progress tracking
+                service = MergeService(
+                    logger=real_logger,
+                    reader=self.reader,
+                    progress_callback=progress_tracker
+                )
+                
+                # Start merge
+                result_df = service.merge(self.source_files, options)
                 
                 if not result_df.empty:
                     result_df.to_excel(save_path, index=False)
                     
-                    # *** Cleaning Up Memory ***
+                    # Clean up memory
                     real_logger.info("Cleaning up memory (Garbage Collection)...")
                     del result_df
-                    gc.collect() 
+                    gc.collect()
                     
-                    self.after(0, lambda: self.finish_merge(save_path, True, None))
+                    self.after(0, lambda: self._finish_merge_success(save_path, progress_dialog))
                 else:
-                    self.after(0, lambda: self.finish_merge(save_path, False, "No data to merge"))
+                    self.after(0, lambda: self._finish_merge_error(
+                        save_path, "No data to merge", progress_dialog
+                    ))
+                    
             except Exception as e:
-                self.after(0, lambda: self.finish_merge(save_path, False, str(e)))
+                error_msg = str(e)
+                if 'cancel' in error_msg.lower():
+                    self.after(0, lambda: self._finish_merge_cancelled(progress_dialog))
+                else:
+                    self.after(0, lambda: self._finish_merge_error(
+                        save_path, error_msg, progress_dialog
+                    ))
 
         threading.Thread(target=run, daemon=True).start()
 
+    def _finish_merge_success(self, save_path, progress_dialog):
+        """Handle successful merge completion"""
+        t = self.texts[self.lang_code]
+        
+        # Close progress dialog
+        progress_dialog.close_dialog()
+        
+        # Update UI
+        self.btn_merge.configure(state="normal", text=t["merge"])
+        self.last_save_path = save_path
+        self.btn_open_folder.configure(state="normal")
+        self.status_label.configure(text=f"{t['status_done']} {os.path.basename(save_path)}")
+        
+        messagebox.showinfo(t["msg_success"], f"Saved to:\n{save_path}")
+    
+    def _finish_merge_error(self, save_path, error_msg, progress_dialog):
+        """Handle merge error"""
+        t = self.texts[self.lang_code]
+        
+        # Close progress dialog
+        progress_dialog.close_dialog()
+        
+        # Update UI
+        self.btn_merge.configure(state="normal", text=t["merge"])
+        self.status_label.configure(text=f"Error: {error_msg}")
+        
+        messagebox.showerror("Error", error_msg)
+    
+    def _finish_merge_cancelled(self, progress_dialog):
+        """Handle merge cancellation"""
+        t = self.texts[self.lang_code]
+        
+        # Close progress dialog
+        progress_dialog.close_dialog()
+        
+        # Update UI
+        self.btn_merge.configure(state="normal", text=t["merge"])
+        self.status_label.configure(text="Operation cancelled")
+        
+        messagebox.showinfo("Cancelled", "Merge operation was cancelled")
+
     def finish_merge(self, save_path, success, error_msg):
+        """Legacy method - kept for compatibility"""
         t = self.texts[self.lang_code]
         self.btn_merge.configure(state="normal", text=t["merge"])
         

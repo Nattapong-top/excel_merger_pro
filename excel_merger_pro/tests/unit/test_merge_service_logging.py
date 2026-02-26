@@ -18,7 +18,14 @@ class TestMergeServiceLogging(unittest.TestCase):
         files = [SourceFile(path, sheets)]
         
         # Act
-        service.merge(files)
+        from src.domain.processing_options import ProcessingOptions
+        options = ProcessingOptions(
+            enable_chunking=False,
+            chunk_size=10000,
+            enable_parallel=False,
+            max_workers=1
+        )
+        service.merge(files, options)
         
         # Assert
         has_start_log = any("Starting merge process" in log for log in spy_logger.logs)

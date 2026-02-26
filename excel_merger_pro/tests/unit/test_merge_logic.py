@@ -36,8 +36,18 @@ class TestMergeLogic(unittest.TestCase):
         file.select_sheet(SheetName("SheetA"))
         
         # 3. Execute
-        service = MergeService(logger=mock_logger, reader=mock_reader) # เดี๋ยวเราต้องแก้ Service ให้รับ reader เพิ่ม
-        result_df = service.merge([file])
+        service = MergeService(logger=mock_logger, reader=mock_reader)
+        
+        # Create default options
+        from src.domain.processing_options import ProcessingOptions
+        options = ProcessingOptions(
+            enable_chunking=False,
+            chunk_size=10000,
+            enable_parallel=False,
+            max_workers=1
+        )
+        
+        result_df = service.merge([file], options)
         
         # 4. Assert
         self.assertEqual(len(result_df), 1, "ต้องมีข้อมูล 1 แถว")
