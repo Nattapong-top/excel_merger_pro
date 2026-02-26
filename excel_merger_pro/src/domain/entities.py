@@ -9,6 +9,8 @@ class SourceFile:
     available_sheets: List[SheetName]
     # ใช้ field(default_factory=list) เพื่อให้ค่าเริ่มต้นเป็น list ว่าง
     selected_sheets: List[SheetName] = field(default_factory=list)
+    file_size_bytes: int = 0  # For determining chunk strategy
+    estimated_rows: int = 0    # For progress calculation
 
     def select_sheet(self, sheet: SheetName):
         """เลือก Sheet ที่ต้องการ (ต้องมีอยู่ใน available_sheets เท่านั้น)"""
@@ -22,3 +24,7 @@ class SourceFile:
     def select_all_sheets(self):
         """เลือกทุก Sheet"""
         self.selected_sheets = self.available_sheets.copy()
+    
+    def requires_chunking(self, threshold_mb: int = 100) -> bool:
+        """Determine if file should be read in chunks"""
+        return self.file_size_bytes > (threshold_mb * 1024 * 1024)
