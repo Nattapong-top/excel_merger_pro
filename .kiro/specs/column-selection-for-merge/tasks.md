@@ -129,7 +129,7 @@
     - แสดง error message ถ้า column_selection ว่างเปล่า
     - _Requirements: 4.1, 5.1, 5.2_
 
-  - [ ]* 4.8 เขียน unit tests สำหรับ MergeService กับ column selection
+  - [x]* 4.8 เขียน unit tests สำหรับ MergeService กับ column selection
     - ทดสอบการรวมไฟล์ด้วย column selection
     - ทดสอบ error case: column_selection ว่างเปล่า
     - ทดสอบ default behavior: ไม่มี column_selection (รวมทุกคอลัมน์)
