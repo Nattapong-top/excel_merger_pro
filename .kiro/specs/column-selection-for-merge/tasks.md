@@ -73,7 +73,7 @@
     - ทดสอบการเรียงลำดับคอลัมน์
     - _Requirements: 4.2, 4.3, 4.4_
 
-- [ ] 3. Checkpoint - ตรวจสอบ Domain และ Infrastructure layers
+- [x] 3. Checkpoint - ตรวจสอบ Domain และ Infrastructure layers
   - รัน tests ทั้งหมดให้ผ่าน
   - ตรวจสอบว่า ColumnMetadata, JsonConfigurationRepository และ ColumnSelector ทำงานถูกต้อง
   - ถามผู้ใช้หากมีคำถามหรือพบปัญหา
