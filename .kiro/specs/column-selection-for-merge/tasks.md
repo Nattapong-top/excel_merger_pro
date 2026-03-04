@@ -29,13 +29,13 @@
     - ทดสอบ default value (None)
     - _Requirements: 4.1_
 
-- [ ] 2. สร้าง Infrastructure Layer components
-  - [ ] 2.1 สร้าง IConfigurationRepository interface
+- [x] 2. สร้าง Infrastructure Layer components
+  - [x] 2.1 สร้าง IConfigurationRepository interface
     - สร้างไฟล์ `excel_merger_pro/src/infrastructure/repositories/configuration_repository.py`
     - Implement abstract class IConfigurationRepository ที่มี methods: save, load, list_saved_configs, delete
     - _Requirements: 6.1, 6.2, 6.3_
 
-  - [ ] 2.2 Implement JsonConfigurationRepository
+  - [x] 2.2 Implement JsonConfigurationRepository
     - Implement JsonConfigurationRepository ใน file เดียวกัน
     - รองรับการบันทึก/โหลด ColumnSelectionConfig เป็น JSON
     - สร้าง config directory ถ้ายังไม่มี
@@ -52,7 +52,7 @@
     - ทดสอบ error cases: FileNotFoundError, invalid JSON, permission errors
     - _Requirements: 6.2, 6.3, 6.4_
 
-  - [ ] 2.5 ขยาย ColumnSelector ให้รองรับ ColumnSelectionConfig
+  - [x] 2.5 ขยาย ColumnSelector ให้รองรับ ColumnSelectionConfig
     - แก้ไขไฟล์ `excel_merger_pro/src/infrastructure/data_processors/column_selector.py`
     - เพิ่ม method `apply_selection(df: pd.DataFrame, config: ColumnSelectionConfig) -> pd.DataFrame`
     - กรองคอลัมน์ตาม selected_columns และเรียงลำดับตาม column_order

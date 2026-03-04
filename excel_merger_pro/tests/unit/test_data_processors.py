@@ -332,7 +332,7 @@ class TestColumnSelector:
         assert len(result) == 3
     
     def test_ignore_non_existent_columns(self):
-        """Test that non-existent columns are ignored"""
+        """Test that non-existent columns are created as empty columns"""
         df = pd.DataFrame({
             'A': [1, 2, 3],
             'B': [4, 5, 6]
@@ -346,7 +346,10 @@ class TestColumnSelector:
         
         result = selector.process(df)
         
-        assert list(result.columns) == ['A', 'B']
+        # Should include all selected columns, creating empty ones for missing
+        assert list(result.columns) == ['A', 'C', 'B']
+        # Column C should be None/NaN since it didn't exist
+        assert result['C'].isna().all()
     
     def test_select_all_columns_in_order(self):
         """Test selecting all columns with custom order"""

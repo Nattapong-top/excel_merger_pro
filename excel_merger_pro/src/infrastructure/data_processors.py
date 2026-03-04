@@ -133,39 +133,59 @@ class DuplicateRemover(IDataProcessor):
 class ColumnSelector(IDataProcessor):
     """
     Selects and reorders columns in DataFrame
-    
+
     Filters to selected columns and applies specified order
     """
-    
+
     def __init__(self, config: ColumnSelectionConfig):
         """
         Initialize with column selection configuration
-        
+
         Args:
             config: ColumnSelectionConfig with selected columns and order
         """
         self.config = config
-    
+
     def process(self, df: Any) -> Any:
         """
         Select and reorder columns in DataFrame
-        
+
         Args:
             df: Input pandas DataFrame
-        
+
         Returns:
             DataFrame with selected columns in specified order
         """
-        # Select only columns that exist in the DataFrame
-        available_columns = [
-            col for col in self.config.column_order
-            if col in df.columns
-        ]
-        
-        result = df[available_columns]
-        
+        return self.apply_selection(df, self.config)
+
+    @staticmethod
+    def apply_selection(df: pd.DataFrame, config: ColumnSelectionConfig) -> pd.DataFrame:
+        """
+        Apply column selection and reordering to DataFrame.
+
+        Creates empty columns for selected columns that don't exist in the DataFrame.
+
+        Args:
+            df: Input pandas DataFrame
+            config: ColumnSelectionConfig with selected columns and order
+
+        Returns:
+            DataFrame with selected columns in specified order
+        """
+        result = df.copy()
+
+        # Create empty columns for missing columns
+        for col in config.column_order:
+            if col not in result.columns:
+                result[col] = None
+
+        # Select and reorder columns
+        result = result[list(config.column_order)]
+
         return result
-    
+
     def get_name(self) -> str:
         """Return processor name for logging"""
         return "ColumnSelector"
+
+
