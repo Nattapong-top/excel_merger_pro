@@ -13,7 +13,7 @@
     - เพิ่ม validation ใน `__post_init__` ตรวจสอบว่า name ไม่ว่างและ source_files ไม่ว่าง
     - _Requirements: 1.1, 1.2, 1.3_
 
-  - [ ]* 1.2 เขียน property test สำหรับ ColumnMetadata validation
+  - [x]* 1.2 เขียน property test สำหรับ ColumnMetadata validation
     - **Property: ColumnMetadata Validation Invariants**
     - **Validates: Requirements 1.1**
     - ทดสอบว่า ColumnMetadata จะ raise ValueError เมื่อ name ว่างหรือ source_files ว่าง
