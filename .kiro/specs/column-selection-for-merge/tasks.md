@@ -135,7 +135,7 @@
     - ทดสอบ default behavior: ไม่มี column_selection (รวมทุกคอลัมน์)
     - _Requirements: 4.1, 5.1, 5.2, 5.3_
 
-- [ ] 5. Checkpoint - ตรวจสอบ Application layer
+- [x] 5. Checkpoint - ตรวจสอบ Application layer
   - รัน tests ทั้งหมดให้ผ่าน
   - ตรวจสอบว่า services ทำงานร่วมกันได้ถูกต้อง
   - ถามผู้ใช้หากมีคำถามหรือพบปัญหา
