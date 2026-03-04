@@ -66,6 +66,63 @@ class TestProcessingOptions:
                 enable_parallel=True,
                 max_workers=16
             )
+    
+    def test_with_column_selection_config(self):
+        """ProcessingOptions should accept ColumnSelectionConfig"""
+        column_config = ColumnSelectionConfig(
+            selected_columns=("Name", "Age", "City"),
+            column_order=("Age", "Name", "City")
+        )
+        options = ProcessingOptions(
+            enable_chunking=True,
+            chunk_size=10000,
+            enable_parallel=True,
+            max_workers=4,
+            column_selection_config=column_config
+        )
+        assert options.column_selection_config is not None
+        assert options.column_selection_config.selected_columns == ("Name", "Age", "City")
+        assert options.column_selection_config.column_order == ("Age", "Name", "City")
+    
+    def test_column_selection_config_default_none(self):
+        """column_selection_config should default to None"""
+        options = ProcessingOptions(
+            enable_chunking=True,
+            chunk_size=10000,
+            enable_parallel=True,
+            max_workers=4
+        )
+        assert options.column_selection_config is None
+    
+    def test_with_all_optional_configs(self):
+        """ProcessingOptions should accept all optional configs including column_selection_config"""
+        group_config = GroupByConfig(
+            group_columns=("Category",),
+            aggregations={"Amount": "sum"}
+        )
+        duplicate_config = DuplicateRemovalConfig(
+            comparison_columns=("ID",),
+            keep="first"
+        )
+        column_config = ColumnSelectionConfig(
+            selected_columns=("ID", "Name", "Amount"),
+            column_order=("ID", "Name", "Amount")
+        )
+        
+        options = ProcessingOptions(
+            enable_chunking=True,
+            chunk_size=10000,
+            enable_parallel=True,
+            max_workers=4,
+            group_by_config=group_config,
+            duplicate_removal_config=duplicate_config,
+            column_selection_config=column_config
+        )
+        
+        assert options.group_by_config is not None
+        assert options.duplicate_removal_config is not None
+        assert options.column_selection_config is not None
+        assert options.column_selection_config.selected_columns == ("ID", "Name", "Amount")
 
 
 class TestGroupByConfig:

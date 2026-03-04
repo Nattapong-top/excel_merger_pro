@@ -378,3 +378,282 @@ class TestColumnSelector:
         selector = ColumnSelector(config)
         
         assert selector.get_name() == "ColumnSelector"
+    
+    # Edge case tests for task 2.7
+    
+    def test_all_selected_columns_missing_from_file(self):
+        """
+        Edge case: All selected columns don't exist in the file
+        Requirements: 4.4 - Missing columns should be created with empty values
+        """
+        df = pd.DataFrame({
+            'A': [1, 2, 3],
+            'B': [4, 5, 6]
+        })
+        
+        config = ColumnSelectionConfig(
+            selected_columns=('X', 'Y', 'Z'),
+            column_order=('X', 'Y', 'Z')
+        )
+        selector = ColumnSelector(config)
+        
+        result = selector.process(df)
+        
+        # Should create all missing columns
+        assert list(result.columns) == ['X', 'Y', 'Z']
+        assert len(result) == 3
+        # All columns should be None/NaN
+        assert result['X'].isna().all()
+        assert result['Y'].isna().all()
+        assert result['Z'].isna().all()
+    
+    def test_mixed_existing_and_missing_columns(self):
+        """
+        Edge case: Some selected columns exist, others don't
+        Requirements: 4.2, 4.4 - Filter existing columns and create missing ones
+        """
+        df = pd.DataFrame({
+            'Name': ['Alice', 'Bob', 'Charlie'],
+            'Age': [25, 30, 35],
+            'City': ['NYC', 'LA', 'SF']
+        })
+        
+        config = ColumnSelectionConfig(
+            selected_columns=('Name', 'Email', 'Age', 'Phone'),
+            column_order=('Name', 'Email', 'Age', 'Phone')
+        )
+        selector = ColumnSelector(config)
+        
+        result = selector.process(df)
+        
+        # Should have all selected columns in order
+        assert list(result.columns) == ['Name', 'Email', 'Age', 'Phone']
+        # Existing columns should have data
+        assert list(result['Name']) == ['Alice', 'Bob', 'Charlie']
+        assert list(result['Age']) == [25, 30, 35]
+        # Missing columns should be None/NaN
+        assert result['Email'].isna().all()
+        assert result['Phone'].isna().all()
+    
+    def test_column_ordering_with_reverse_order(self):
+        """
+        Edge case: Reverse the order of columns
+        Requirements: 4.3 - Maintain specified column order
+        """
+        df = pd.DataFrame({
+            'First': [1, 2, 3],
+            'Second': [4, 5, 6],
+            'Third': [7, 8, 9],
+            'Fourth': [10, 11, 12]
+        })
+        
+        config = ColumnSelectionConfig(
+            selected_columns=('Fourth', 'Third', 'Second', 'First'),
+            column_order=('Fourth', 'Third', 'Second', 'First')
+        )
+        selector = ColumnSelector(config)
+        
+        result = selector.process(df)
+        
+        # Should be in reverse order
+        assert list(result.columns) == ['Fourth', 'Third', 'Second', 'First']
+        # Data should be preserved
+        assert list(result['First']) == [1, 2, 3]
+        assert list(result['Fourth']) == [10, 11, 12]
+    
+    def test_column_ordering_with_interleaved_order(self):
+        """
+        Edge case: Interleave columns in non-sequential order
+        Requirements: 4.3 - Maintain specified column order
+        """
+        df = pd.DataFrame({
+            'A': [1, 2],
+            'B': [3, 4],
+            'C': [5, 6],
+            'D': [7, 8],
+            'E': [9, 10]
+        })
+        
+        config = ColumnSelectionConfig(
+            selected_columns=('B', 'D', 'A', 'E', 'C'),
+            column_order=('B', 'D', 'A', 'E', 'C')
+        )
+        selector = ColumnSelector(config)
+        
+        result = selector.process(df)
+        
+        # Should be in specified interleaved order
+        assert list(result.columns) == ['B', 'D', 'A', 'E', 'C']
+        assert list(result['A']) == [1, 2]
+        assert list(result['B']) == [3, 4]
+    
+    def test_empty_dataframe_with_column_selection(self):
+        """
+        Edge case: Apply column selection to empty DataFrame
+        Requirements: 4.2, 4.4 - Handle empty data gracefully
+        """
+        df = pd.DataFrame({
+            'A': [],
+            'B': [],
+            'C': []
+        })
+        
+        config = ColumnSelectionConfig(
+            selected_columns=('A', 'D'),
+            column_order=('A', 'D')
+        )
+        selector = ColumnSelector(config)
+        
+        result = selector.process(df)
+        
+        # Should have selected columns even with no rows
+        assert list(result.columns) == ['A', 'D']
+        assert len(result) == 0
+    
+    def test_single_row_dataframe_with_missing_columns(self):
+        """
+        Edge case: Single row DataFrame with missing columns
+        Requirements: 4.4 - Create missing columns with empty values
+        """
+        df = pd.DataFrame({
+            'ID': [1],
+            'Value': [100]
+        })
+        
+        config = ColumnSelectionConfig(
+            selected_columns=('ID', 'Name', 'Value', 'Status'),
+            column_order=('ID', 'Name', 'Value', 'Status')
+        )
+        selector = ColumnSelector(config)
+        
+        result = selector.process(df)
+        
+        assert list(result.columns) == ['ID', 'Name', 'Value', 'Status']
+        assert result['ID'].values[0] == 1
+        assert result['Value'].values[0] == 100
+        assert pd.isna(result['Name'].values[0])
+        assert pd.isna(result['Status'].values[0])
+    
+    def test_column_selection_preserves_data_types(self):
+        """
+        Edge case: Ensure data types are preserved after selection
+        Requirements: 4.2 - Filter columns without altering data
+        """
+        df = pd.DataFrame({
+            'IntCol': [1, 2, 3],
+            'FloatCol': [1.5, 2.5, 3.5],
+            'StrCol': ['a', 'b', 'c'],
+            'BoolCol': [True, False, True]
+        })
+        
+        config = ColumnSelectionConfig(
+            selected_columns=('StrCol', 'IntCol', 'BoolCol'),
+            column_order=('StrCol', 'IntCol', 'BoolCol')
+        )
+        selector = ColumnSelector(config)
+        
+        result = selector.process(df)
+        
+        # Data types should be preserved
+        assert result['IntCol'].dtype == df['IntCol'].dtype
+        assert result['StrCol'].dtype == df['StrCol'].dtype
+        assert result['BoolCol'].dtype == df['BoolCol'].dtype
+    
+    def test_column_selection_with_special_characters_in_names(self):
+        """
+        Edge case: Column names with special characters
+        Requirements: 4.2, 4.3 - Handle special column names
+        """
+        df = pd.DataFrame({
+            'Column A': [1, 2, 3],
+            'Column-B': [4, 5, 6],
+            'Column_C': [7, 8, 9],
+            'Column.D': [10, 11, 12]
+        })
+        
+        config = ColumnSelectionConfig(
+            selected_columns=('Column.D', 'Column A', 'Column_C'),
+            column_order=('Column.D', 'Column A', 'Column_C')
+        )
+        selector = ColumnSelector(config)
+        
+        result = selector.process(df)
+        
+        assert list(result.columns) == ['Column.D', 'Column A', 'Column_C']
+        assert list(result['Column A']) == [1, 2, 3]
+        assert list(result['Column.D']) == [10, 11, 12]
+    
+    def test_column_selection_with_numeric_column_names(self):
+        """
+        Edge case: Numeric column names (common in Excel without headers)
+        Requirements: 4.2, 4.3 - Handle numeric column names
+        """
+        df = pd.DataFrame({
+            0: [1, 2, 3],
+            1: [4, 5, 6],
+            2: [7, 8, 9]
+        })
+        
+        # Convert to string column names as ColumnSelectionConfig expects strings
+        df.columns = ['0', '1', '2']
+        
+        config = ColumnSelectionConfig(
+            selected_columns=('2', '0'),
+            column_order=('2', '0')
+        )
+        selector = ColumnSelector(config)
+        
+        result = selector.process(df)
+        
+        assert list(result.columns) == ['2', '0']
+        assert list(result['0']) == [1, 2, 3]
+        assert list(result['2']) == [7, 8, 9]
+    
+    def test_apply_selection_static_method(self):
+        """
+        Edge case: Test static method apply_selection directly
+        Requirements: 4.2, 4.3, 4.4 - Verify static method works independently
+        """
+        df = pd.DataFrame({
+            'A': [1, 2],
+            'B': [3, 4]
+        })
+        
+        config = ColumnSelectionConfig(
+            selected_columns=('B', 'C', 'A'),
+            column_order=('B', 'C', 'A')
+        )
+        
+        result = ColumnSelector.apply_selection(df, config)
+        
+        assert list(result.columns) == ['B', 'C', 'A']
+        assert list(result['A']) == [1, 2]
+        assert list(result['B']) == [3, 4]
+        assert result['C'].isna().all()
+    
+    def test_column_selection_does_not_modify_original_dataframe(self):
+        """
+        Edge case: Ensure original DataFrame is not modified
+        Requirements: 4.2 - Process should not have side effects
+        """
+        df = pd.DataFrame({
+            'A': [1, 2, 3],
+            'B': [4, 5, 6],
+            'C': [7, 8, 9]
+        })
+        original_columns = list(df.columns)
+        
+        config = ColumnSelectionConfig(
+            selected_columns=('A', 'C'),
+            column_order=('A', 'C')
+        )
+        selector = ColumnSelector(config)
+        
+        result = selector.process(df)
+        
+        # Original DataFrame should be unchanged
+        assert list(df.columns) == original_columns
+        assert 'B' in df.columns
+        # Result should have only selected columns
+        assert list(result.columns) == ['A', 'C']
+        assert 'B' not in result.columns

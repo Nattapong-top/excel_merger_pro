@@ -13,7 +13,7 @@
     - เพิ่ม validation ใน `__post_init__` ตรวจสอบว่า name ไม่ว่างและ source_files ไม่ว่าง
     - _Requirements: 1.1, 1.2, 1.3_
 
-  - [x]* 1.2 เขียน property test สำหรับ ColumnMetadata validation
+  - [x] 1.2 เขียน property test สำหรับ ColumnMetadata validation
     - **Property: ColumnMetadata Validation Invariants**
     - **Validates: Requirements 1.1**
     - ทดสอบว่า ColumnMetadata จะ raise ValueError เมื่อ name ว่างหรือ source_files ว่าง
@@ -24,7 +24,7 @@
     - อัพเดท `__post_init__` validation ถ้าจำเป็น
     - _Requirements: 4.1_
 
-  - [ ]* 1.4 เขียน unit tests สำหรับ ProcessingOptions ที่มี ColumnSelectionConfig
+  - [x] 1.4 เขียน unit tests สำหรับ ProcessingOptions ที่มี ColumnSelectionConfig
     - ทดสอบการสร้าง ProcessingOptions พร้อม column_selection
     - ทดสอบ default value (None)
     - _Requirements: 4.1_
@@ -41,12 +41,12 @@
     - สร้าง config directory ถ้ายังไม่มี
     - _Requirements: 6.2, 6.4_
 
-  - [ ]* 2.3 เขียน property test สำหรับ configuration serialization round trip
+  - [x] 2.3 เขียน property test สำหรับ configuration serialization round trip
     - **Property 14: Configuration Serialization Round Trip**
     - **Validates: Requirements 6.2, 6.4**
     - ทดสอบว่าการ save แล้ว load config จะได้ config เดิม
 
-  - [ ]* 2.4 เขียน unit tests สำหรับ JsonConfigurationRepository
+  - [x] 2.4 เขียน unit tests สำหรับ JsonConfigurationRepository
     - ทดสอบการบันทึก config ที่มีชื่อเฉพาะ
     - ทดสอบการโหลด config ที่มีอยู่
     - ทดสอบ error cases: FileNotFoundError, invalid JSON, permission errors
@@ -59,7 +59,7 @@
     - จัดการกรณีคอลัมน์ที่ไม่มีในไฟล์ (สร้างคอลัมน์ว่าง)
     - _Requirements: 4.2, 4.3, 4.4, 4.5_
 
-  - [ ]* 2.6 เขียน property tests สำหรับ ColumnSelector
+  - [x] 2.6 เขียน property tests สำหรับ ColumnSelector
     - **Property 11: Output Column Filtering**
     - **Validates: Requirements 4.2, 4.5**
     - **Property 12: Output Column Ordering**
@@ -67,7 +67,7 @@
     - **Property 13: Missing Column Handling**
     - **Validates: Requirements 4.4**
 
-  - [ ]* 2.7 เขียน unit tests สำหรับ ColumnSelector edge cases
+  - [x] 2.7 เขียน unit tests สำหรับ ColumnSelector edge cases
     - ทดสอบกรณีคอลัมน์ที่เลือกไม่มีในไฟล์
     - ทดสอบกรณีมีคอลัมน์ซ้ำกัน
     - ทดสอบการเรียงลำดับคอลัมน์
