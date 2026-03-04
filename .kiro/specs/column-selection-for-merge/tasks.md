@@ -189,7 +189,7 @@
     - ทดสอบ load config → merge
     - _Requirements: 1.1, 2.5, 4.1, 6.1, 6.3, 7.1_
 
-- [ ] 8. Checkpoint สุดท้าย - ตรวจสอบระบบทั้งหมด
+- [x] 8. Checkpoint สุดท้าย - ตรวจสอบระบบทั้งหมด
   - รัน tests ทั้งหมดให้ผ่าน (unit tests, property tests, integration tests)
   - ทดสอบ UI ด้วยตนเองกับไฟล์จริง
   - ตรวจสอบว่าทุก requirements ได้รับการ implement ครบถ้วน
