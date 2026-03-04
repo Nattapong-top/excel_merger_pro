@@ -6,8 +6,8 @@
 
 ## Tasks
 
-- [ ] 1. สร้าง Domain Layer entities และ value objects
-  - [ ] 1.1 สร้าง ColumnMetadata entity
+- [x] 1. สร้าง Domain Layer entities และ value objects
+  - [x] 1.1 สร้าง ColumnMetadata entity
     - สร้างไฟล์ `excel_merger_pro/src/domain/column_metadata.py`
     - Implement dataclass ColumnMetadata ที่มี attributes: name, source_files, is_from_header, data_type
     - เพิ่ม validation ใน `__post_init__` ตรวจสอบว่า name ไม่ว่างและ source_files ไม่ว่าง
@@ -18,7 +18,7 @@
     - **Validates: Requirements 1.1**
     - ทดสอบว่า ColumnMetadata จะ raise ValueError เมื่อ name ว่างหรือ source_files ว่าง
 
-  - [ ] 1.3 ขยาย ProcessingOptions ให้รองรับ ColumnSelectionConfig
+  - [x] 1.3 ขยาย ProcessingOptions ให้รองรับ ColumnSelectionConfig
     - แก้ไขไฟล์ `excel_merger_pro/src/domain/processing_options.py`
     - เพิ่ม attribute `column_selection: Optional[ColumnSelectionConfig]` ใน ProcessingOptions
     - อัพเดท `__post_init__` validation ถ้าจำเป็น
