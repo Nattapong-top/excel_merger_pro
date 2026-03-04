@@ -78,8 +78,8 @@
   - ตรวจสอบว่า ColumnMetadata, JsonConfigurationRepository และ ColumnSelector ทำงานถูกต้อง
   - ถามผู้ใช้หากมีคำถามหรือพบปัญหา
 
-- [ ] 4. สร้าง Application Layer services
-  - [ ] 4.1 สร้าง ColumnDiscoveryService
+- [x] 4. สร้าง Application Layer services
+  - [x] 4.1 สร้าง ColumnDiscoveryService
     - สร้างไฟล์ `excel_merger_pro/src/application/services/column_discovery_service.py`
     - Implement method `discover_columns(files: List[SourceFile]) -> List[ColumnMetadata]`
     - อ่านคอลัมน์จากทุกไฟล์และรวมเป็น list ที่ไม่ซ้ำกัน
@@ -104,7 +104,7 @@
     - ทดสอบ error cases: ไฟล์เสีย, ไฟล์ว่าง
     - _Requirements: 1.1, 1.2, 1.3, 1.4_
 
-  - [ ] 4.4 สร้าง ColumnSelectionService
+  - [x] 4.4 สร้าง ColumnSelectionService
     - สร้างไฟล์ `excel_merger_pro/src/application/services/column_selection_service.py`
     - Implement methods: create_config, save_config, load_config, get_default_config
     - validate ว่า selected_columns ไม่ว่างและ column_order ตรงกับ selected_columns
@@ -122,7 +122,7 @@
     - ทดสอบ get_default_config (เลือกทุกคอลัมน์)
     - _Requirements: 2.1, 5.1, 5.3_
 
-  - [ ] 4.7 ขยาย MergeService ให้รองรับ ColumnSelectionConfig
+  - [x] 4.7 ขยาย MergeService ให้รองรับ ColumnSelectionConfig
     - แก้ไขไฟล์ `excel_merger_pro/src/application/services/merge_service.py`
     - เพิ่มการตรวจสอบ column_selection ใน ProcessingOptions
     - เรียกใช้ ColumnSelector.apply_selection ถ้ามี column_selection

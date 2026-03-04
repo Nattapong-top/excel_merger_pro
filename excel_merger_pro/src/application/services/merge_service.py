@@ -206,6 +206,12 @@ class MergeService:
         
         # Apply column selection
         if options.column_selection_config:
+            # Validate that column selection is not empty
+            if not options.column_selection_config.selected_columns:
+                error_msg = "Column selection cannot be empty. Please select at least one column."
+                self.logger.error(error_msg)
+                raise ValueError(error_msg)
+            
             self.logger.info("Applying column selection")
             processor = ColumnSelector(options.column_selection_config)
             df = processor.process(df)
