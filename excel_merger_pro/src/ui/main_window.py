@@ -13,7 +13,9 @@ from src.domain.entities import SourceFile
 from src.infrastructure.excel_reader import PandasSheetReader
 from src.infrastructure.gui_logger import GuiLogger
 from src.application.services import MergeService
+from src.application.services.column_discovery_service import ColumnDiscoveryService
 from src.ui.dialogs import SheetSelectionDialog, MultiFileSheetSelectionDialog
+from src.ui.column_selection_dialog import ColumnSelectionDialog
 from src.ui.processing_options_dialog import ProcessingOptionsDialog
 from src.ui.progress_dialog import ProgressDialog
 from src.application.interfaces import ILogger
@@ -39,6 +41,7 @@ class MainWindow(ctk.CTk):
         self.source_files = [] 
         self.last_save_path = ""
         self.lang_code = "en"
+        self.column_selection_config = None  # Store column selection config
         
         # --- Backend Setup ---
         self.reader = PandasSheetReader()
@@ -122,6 +125,16 @@ class MainWindow(ctk.CTk):
 
         self.btn_clear = ctk.CTkButton(self.btn_frame, text="Clear", fg_color="transparent", border_width=2, text_color=("gray10", "#DCE4EE"), command=self.clear_action)
         self.btn_clear.pack(pady=(0, 20), fill="x")
+
+        # Column Selection Button
+        self.btn_select_columns = ctk.CTkButton(
+            self.btn_frame,
+            text="📋 Select Columns",
+            fg_color="#FFA500",
+            hover_color="#FF8C00",
+            command=self.select_columns_action
+        )
+        self.btn_select_columns.pack(pady=(0, 10), fill="x")
 
         self.btn_merge = ctk.CTkButton(self.btn_frame, text="MERGE", height=60, fg_color="#2CC985", hover_color="#FF0000", font=ctk.CTkFont(size=16, weight="bold"), command=self.merge_action)
         self.btn_merge.pack(side="bottom", fill="x", pady=(10, 0))
@@ -232,8 +245,47 @@ class MainWindow(ctk.CTk):
     def clear_action(self):
         self.source_files = []
         self.last_save_path = ""
+        self.column_selection_config = None  # Reset column selection
         self.btn_open_folder.configure(state="disabled")
         self.update_file_list_ui() # รีเซ็ตหน้าจอกลับมาเป็นรายชื่อไฟล์
+    
+    def select_columns_action(self):
+        """Open column selection dialog"""
+        if not self.source_files:
+            messagebox.showwarning("Warning", "Please add files first!")
+            return
+        
+        # Discover columns from all source files
+        try:
+            discovery_service = ColumnDiscoveryService(
+                reader=self.reader,
+                logger=self.dummy_logger
+            )
+            
+            available_columns = discovery_service.discover_columns(self.source_files)
+            
+            if not available_columns:
+                messagebox.showinfo("Info", "No columns found in the selected files")
+                return
+            
+            # Show column selection dialog
+            dialog = ColumnSelectionDialog(
+                self,
+                available_columns=available_columns,
+                lang_code=self.lang_code
+            )
+            
+            config = dialog.get_selection_config()
+            
+            if config:
+                self.column_selection_config = config
+                messagebox.showinfo(
+                    "Success",
+                    f"Selected {len(config.selected_columns)} column(s)"
+                )
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to discover columns:\n{str(e)}")
+
 
     def merge_action(self):
         t = self.texts[self.lang_code]
@@ -272,6 +324,12 @@ class MainWindow(ctk.CTk):
         if options is None:
             # User cancelled
             return
+        
+        # Apply column selection if configured
+        if self.column_selection_config:
+            # Replace the column_selection_config in options
+            from dataclasses import replace
+            options = replace(options, column_selection_config=self.column_selection_config)
 
         # 2. Auto-generate filename
         first_file_name = os.path.basename(self.source_files[0].path.value).split('.')[0]

@@ -141,7 +141,7 @@
   - ถามผู้ใช้หากมีคำถามหรือพบปัญหา
 
 - [ ] 6. สร้าง UI Layer components
-  - [ ] 6.1 สร้าง ColumnSelectionDialog
+  - [x] 6.1 สร้าง ColumnSelectionDialog
     - สร้างไฟล์ `excel_merger_pro/src/ui/dialogs/column_selection_dialog.py`
     - สร้าง dialog ด้วย PyQt6 ที่แสดงรายการคอลัมน์พร้อม checkboxes
     - เพิ่มปุ่ม "Select All" และ "Deselect All"
@@ -159,7 +159,7 @@
     - ทดสอบการ save/load configuration
     - _Requirements: 2.1, 2.2, 2.3, 3.1, 3.3, 6.1, 6.3, 7.1_
 
-  - [ ] 6.3 เชื่อมต่อ ColumnSelectionDialog กับ main window
+  - [x] 6.3 เชื่อมต่อ ColumnSelectionDialog กับ main window
     - แก้ไขไฟล์ main window เพื่อเพิ่มปุ่ม "Select Columns"
     - เมื่อผู้ใช้คลิกปุ่ม ให้เรียก ColumnDiscoveryService เพื่อค้นหาคอลัมน์
     - แสดง ColumnSelectionDialog พร้อมรายการคอลัมน์
