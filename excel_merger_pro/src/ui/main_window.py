@@ -45,7 +45,7 @@ class MainWindow(ctk.CTk):
         self.lang_code = "en"
         
         # --- Backend Setup ---
-        self.reader = PandasSheetReader()
+        self.reader = PandasSheetReader()  # Will be updated with logger during merge
         # เริ่มต้นใช้ Logger ปลอมไปก่อน (เพราะยังไม่มีการ merge)
         self.dummy_logger = DummyLogger()
         self.service = MergeService(logger=self.dummy_logger, reader=self.reader)
@@ -309,6 +309,9 @@ class MainWindow(ctk.CTk):
             try:
                 # Create GUI logger
                 real_logger = GuiLogger(self.file_list_display)
+                
+                # Update reader with logger
+                self.reader.logger = real_logger
                 
                 # Create service with progress tracking
                 service = MergeService(

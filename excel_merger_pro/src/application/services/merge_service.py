@@ -145,6 +145,13 @@ class MergeService:
         
         self.logger.info(f"Processing file: {file.path.value}")
         
+        # Determine which columns to read (optimization)
+        usecols = None
+        if options.column_selection_config:
+            # Read only selected columns for faster performance
+            usecols = list(options.column_selection_config.selected_columns)
+            self.logger.info(f"  Fast mode: Reading only {len(usecols)} selected columns")
+        
         file_data_frames = []
         
         for sheet in file.selected_sheets:
@@ -154,9 +161,9 @@ class MergeService:
                 # Choose reading strategy
                 if options.enable_chunking and file.requires_chunking():
                     self.logger.info(f"    Using chunked reading (chunk_size={options.chunk_size})")
-                    df = self._read_sheet_chunked(file, sheet, options.chunk_size)
+                    df = self._read_sheet_chunked(file, sheet, options.chunk_size, usecols)
                 else:
-                    df = self.reader.read_sheet(file.path, sheet)
+                    df = self.reader.read_sheet(file.path, sheet, usecols)
                 
                 # Remove empty rows BEFORE adding origin tracking columns
                 # This ensures we check the actual data columns, not the metadata columns
@@ -193,13 +200,14 @@ class MergeService:
         self,
         file: SourceFile,
         sheet,
-        chunk_size: int
+        chunk_size: int,
+        usecols: List[str] = None
     ) -> Any:
         """Read sheet in chunks and concatenate"""
         import pandas as pd
         
         chunks = []
-        for chunk in self.reader.read_sheet_chunked(file.path, sheet, chunk_size):
+        for chunk in self.reader.read_sheet_chunked(file.path, sheet, chunk_size, usecols):
             chunks.append(chunk)
             
             # Check cancellation between chunks
