@@ -20,33 +20,50 @@ class PandasSheetReader(ISheetReader):
         import pandas as pd
         try:
             # อ่านข้อมูลจาก Sheet ที่ระบุ
-            # ใช้ engine='openpyxl' เพื่อความเร็ว
+            # ลองใช้ engine='calamine' ก่อน (เร็วที่สุด 5-10x)
+            # ถ้าไม่มี fallback ไป openpyxl
             # ไม่ใช้ dtype=str ทั้งหมดเพื่อเพิ่มความเร็ว (เร็วขึ้น 50-70%)
             
             # ถ้ามีการระบุ usecols ให้อ่านเฉพาะคอลัมน์นั้น (เร็วขึ้นอีก 50-70%)
-            if usecols:
-                if self.logger:
-                    self.logger.info(f"    Reading only {len(usecols)} selected columns (fast mode)")
-                df = pd.read_excel(
-                    path.value, 
-                    sheet_name=sheet_name.value,
-                    engine='openpyxl',
-                    usecols=usecols
-                )
-            else:
-                df = pd.read_excel(
-                    path.value, 
-                    sheet_name=sheet_name.value,
-                    engine='openpyxl'
-                )
+            engines_to_try = ['calamine', 'openpyxl']
+            last_error = None
             
-            # แปลงเฉพาะคอลัมน์ที่เป็น object (text) ให้เป็น string
-            # เพื่อป้องกันปัญหา mixed types และ preserve leading zeros
-            for col in df.columns:
-                if df[col].dtype == 'object':
-                    df[col] = df[col].astype(str)
+            for engine in engines_to_try:
+                try:
+                    if usecols:
+                        if self.logger:
+                            self.logger.info(f"    Reading only {len(usecols)} selected columns with {engine} engine")
+                        df = pd.read_excel(
+                            path.value, 
+                            sheet_name=sheet_name.value,
+                            engine=engine,
+                            usecols=usecols
+                        )
+                    else:
+                        if self.logger:
+                            self.logger.info(f"    Using {engine} engine for reading")
+                        df = pd.read_excel(
+                            path.value, 
+                            sheet_name=sheet_name.value,
+                            engine=engine
+                        )
+                    
+                    # แปลงเฉพาะคอลัมน์ที่เป็น object (text) ให้เป็น string
+                    # เพื่อป้องกันปัญหา mixed types และ preserve leading zeros
+                    for col in df.columns:
+                        if df[col].dtype == 'object':
+                            df[col] = df[col].astype(str)
+                    
+                    return df
+                    
+                except (ImportError, ValueError) as e:
+                    # Engine ไม่มีหรือใช้ไม่ได้ ลองตัวถัดไป
+                    last_error = e
+                    continue
             
-            return df
+            # ถ้าทุก engine ล้มเหลว
+            raise ValueError(f"Error reading sheet '{sheet_name.value}': {last_error}")
+            
         except Exception as e:
             raise ValueError(f"Error reading sheet '{sheet_name.value}': {e}")
     

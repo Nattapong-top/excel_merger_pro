@@ -60,8 +60,8 @@ class GroupByConfigDialog(ctk.CTkToplevel):
         
         # Window configuration
         self.title(self.texts["title"])
-        self.geometry("550x650")
-        self.resizable(False, False)
+        self.geometry("650x750")  # เพิ่มขนาดหน้าต่างให้ใหญ่ขึ้น
+        self.resizable(True, True)  # อนุญาตให้ปรับขนาดได้
         
         # Make modal
         self.transient(parent)
@@ -69,8 +69,8 @@ class GroupByConfigDialog(ctk.CTkToplevel):
         
         # Center on parent
         self.update_idletasks()
-        x = parent.winfo_x() + (parent.winfo_width() - 500) // 2
-        y = parent.winfo_y() + (parent.winfo_height() - 600) // 2
+        x = parent.winfo_x() + (parent.winfo_width() - 650) // 2  # ปรับตามขนาดใหม่
+        y = parent.winfo_y() + (parent.winfo_height() - 750) // 2  # ปรับตามขนาดใหม่
         self.geometry(f"+{x}+{y}")
         
         self._create_widgets()
@@ -164,27 +164,31 @@ class GroupByConfigDialog(ctk.CTkToplevel):
         button_frame = ctk.CTkFrame(main_frame)
         button_frame.pack(fill="x", pady=(10, 0))
         
-        ctk.CTkButton(
-            button_frame,
-            text=self.texts["cancel"],
-            command=self._on_cancel,
-            width=200,
-            height=50,
-            font=("Arial", 15),
-            fg_color="gray",
-            hover_color="darkgray"
-        ).pack(side="right", padx=5)
+        # สร้าง frame ย่อยเพื่อจัดปุ่มให้เท่ากัน
+        button_container = ctk.CTkFrame(button_frame, fg_color="transparent")
+        button_container.pack(expand=True)
         
         ctk.CTkButton(
-            button_frame,
+            button_container,
             text=self.texts["ok"],
             command=self._on_ok,
-            width=200,
-            height=50,
-            font=("Arial", 15, "bold"),
+            width=150,
+            height=45,
+            font=("Arial", 14, "bold"),
             fg_color="#2CC985",
             hover_color="#28B574"
-        ).pack(side="right", padx=5)
+        ).pack(side="left", padx=5)
+        
+        ctk.CTkButton(
+            button_container,
+            text=self.texts["cancel"],
+            command=self._on_cancel,
+            width=150,
+            height=45,
+            font=("Arial", 14),
+            fg_color="gray",
+            hover_color="darkgray"
+        ).pack(side="left", padx=5)
     
     def _on_ok(self):
         """Handle OK button"""

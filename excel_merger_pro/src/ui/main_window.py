@@ -112,7 +112,10 @@ class MainWindow(ctk.CTk):
         self.file_list_display = ctk.CTkTextbox(self.main_frame, font=("Consolas", 14))
         self.file_list_display.grid(row=0, column=0, sticky="nsew", padx=(0, 15))
         self.file_list_display.insert("0.0", "Please add files...\n")
-        self.file_list_display.configure(state="disabled")
+        # ไม่ล็อค textbox เพื่อให้ copy ได้
+        
+        # เพิ่ม right-click menu สำหรับ copy
+        self._setup_textbox_copy_menu()
 
         # 4. Buttons Zone
         self.btn_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
@@ -137,6 +140,48 @@ class MainWindow(ctk.CTk):
         # 5. Status Bar
         self.status_label = ctk.CTkLabel(self, text="Ready...", anchor="w", text_color="gray")
         self.status_label.grid(row=2, column=0, sticky="ew", padx=20, pady=(0, 10))
+    
+    def _setup_textbox_copy_menu(self):
+        """Setup right-click menu for copy functionality"""
+        import tkinter as tk
+        
+        # Create context menu
+        self.context_menu = tk.Menu(self, tearoff=0)
+        self.context_menu.add_command(label="Copy (Ctrl+C)", command=self._copy_selected_text)
+        self.context_menu.add_command(label="Select All (Ctrl+A)", command=self._select_all_text)
+        
+        # Bind right-click
+        self.file_list_display.bind("<Button-3>", self._show_context_menu)
+        
+        # Bind Ctrl+C and Ctrl+A
+        self.file_list_display.bind("<Control-c>", lambda e: self._copy_selected_text())
+        self.file_list_display.bind("<Control-a>", lambda e: self._select_all_text())
+    
+    def _show_context_menu(self, event):
+        """Show context menu on right-click"""
+        try:
+            self.context_menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            self.context_menu.grab_release()
+    
+    def _copy_selected_text(self):
+        """Copy selected text to clipboard"""
+        try:
+            # Get selected text from textbox
+            selected = self.file_list_display.get("sel.first", "sel.last")
+            if selected:
+                self.clipboard_clear()
+                self.clipboard_append(selected)
+        except:
+            # If no selection, copy all
+            all_text = self.file_list_display.get("0.0", "end")
+            self.clipboard_clear()
+            self.clipboard_append(all_text)
+    
+    def _select_all_text(self):
+        """Select all text in textbox"""
+        self.file_list_display.tag_add("sel", "0.0", "end")
+        return "break"  # Prevent default behavior
 
     # --- UI Logic ---
     def update_file_list_ui(self):
@@ -158,7 +203,7 @@ class MainWindow(ctk.CTk):
                 selected_names = ", ".join([s.value for s in file.selected_sheets])
                 self.file_list_display.insert("end", f"      ↳ {selected_names}\n\n")
 
-        self.file_list_display.configure(state="disabled")
+        # ไม่ล็อค textbox เพื่อให้ copy ได้
 
     def add_files_action(self):
         file_paths = filedialog.askopenfilenames(filetypes=[("Excel Files", "*.xlsx *.xls")])
@@ -295,14 +340,27 @@ class MainWindow(ctk.CTk):
         self.file_list_display.configure(state="normal")
         self.file_list_display.delete("0.0", "end")
         self.file_list_display.insert("0.0", "--- STARTING MERGE PROCESS ---\n\n")
-        self.file_list_display.configure(state="disabled")
+        # ไม่ล็อค textbox เพื่อให้ copy ได้
 
         self.btn_merge.configure(state="disabled", text="Processing...")
         self.status_label.configure(text=t["status_processing"])
 
-        # 5. Create progress tracker and dialog
+        # 5. Create progress tracker (no dialog - show in status bar instead)
         progress_tracker = ThreadSafeProgressTracker()
-        progress_dialog = ProgressDialog(self, progress_tracker, title="Merging Files")
+        
+        # Update status bar with progress
+        def update_status_from_progress():
+            state = progress_tracker.get_latest_state()
+            if state:
+                self.status_label.configure(
+                    text=f"Processing: {state.current_file} - {state.percentage:.0f}% ({state.files_completed}/{state.total_files} files)"
+                )
+            # Keep updating every 500ms
+            if self.btn_merge.cget("state") == "disabled":
+                self.after(500, update_status_from_progress)
+        
+        # Start status updates
+        self.after(500, update_status_from_progress)
 
         # 6. Run merge in background thread
         def run():
@@ -331,19 +389,19 @@ class MainWindow(ctk.CTk):
                     del result_df
                     gc.collect()
                     
-                    self.after(0, lambda: self._finish_merge_success(save_path, progress_dialog))
+                    self.after(0, lambda: self._finish_merge_success(save_path, None))  # No dialog
                 else:
                     self.after(0, lambda: self._finish_merge_error(
-                        save_path, "No data to merge", progress_dialog
+                        save_path, "No data to merge", None  # No dialog
                     ))
                     
             except Exception as e:
                 error_msg = str(e)
                 if 'cancel' in error_msg.lower():
-                    self.after(0, lambda: self._finish_merge_cancelled(progress_dialog))
+                    self.after(0, lambda: self._finish_merge_cancelled(None))  # No dialog
                 else:
                     self.after(0, lambda: self._finish_merge_error(
-                        save_path, error_msg, progress_dialog
+                        save_path, error_msg, None  # No dialog
                     ))
 
         threading.Thread(target=run, daemon=True).start()
@@ -352,8 +410,9 @@ class MainWindow(ctk.CTk):
         """Handle successful merge completion"""
         t = self.texts[self.lang_code]
         
-        # Close progress dialog
-        progress_dialog.close_dialog()
+        # Close progress dialog (if exists)
+        if progress_dialog:
+            progress_dialog.close_dialog()
         
         # Update UI
         self.btn_merge.configure(state="normal", text=t["merge"])
@@ -367,8 +426,9 @@ class MainWindow(ctk.CTk):
         """Handle merge error"""
         t = self.texts[self.lang_code]
         
-        # Close progress dialog
-        progress_dialog.close_dialog()
+        # Close progress dialog (if exists)
+        if progress_dialog:
+            progress_dialog.close_dialog()
         
         # Update UI
         self.btn_merge.configure(state="normal", text=t["merge"])
@@ -380,8 +440,9 @@ class MainWindow(ctk.CTk):
         """Handle merge cancellation"""
         t = self.texts[self.lang_code]
         
-        # Close progress dialog
-        progress_dialog.close_dialog()
+        # Close progress dialog (if exists)
+        if progress_dialog:
+            progress_dialog.close_dialog()
         
         # Update UI
         self.btn_merge.configure(state="normal", text=t["merge"])

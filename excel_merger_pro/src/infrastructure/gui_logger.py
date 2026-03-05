@@ -18,7 +18,7 @@ class GuiLogger(ILogger):
         self.textbox.after(0, self._append_text, f"[{timestamp}] [ERROR] {message}\n")
 
     def _append_text(self, text):
-        # 1. ปลดล็อคกล่องข้อความ
+        # 1. ปลดล็อคกล่องข้อความชั่วคราว
         self.textbox.configure(state="normal")
         
         # 2. เขียนข้อความต่อท้าย
@@ -27,5 +27,6 @@ class GuiLogger(ILogger):
         # 3. เลื่อน Scrollbar ลงล่างสุด
         self.textbox.see("end")
         
-        # 4. ล็อคกลับเหมือนเดิม
-        self.textbox.configure(state="disabled")
+        # 4. ไม่ล็อคกลับ - ให้ copy ได้
+        # แต่ปิดการแก้ไขด้วย binding
+        # (ปล่อยให้เป็น normal เพื่อให้ copy ได้)

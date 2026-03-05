@@ -113,10 +113,11 @@ class ProcessingOptionsDialog(ctk.CTkToplevel):
         self.texts = self.TEXTS.get(lang_code, self.TEXTS["en"])
         
         # Set default performance values (hidden from UI but used in processing)
-        self.chunking_var = ctk.BooleanVar(value=False)
-        self.chunk_size_value = 10000
-        self.parallel_var = ctk.BooleanVar(value=True)  # Default: enabled
-        self.max_workers_value = 4
+        # Memory-optimized for 16GB RAM limit: Enable chunking with smaller chunks, single worker
+        self.chunking_var = ctk.BooleanVar(value=True)  # Enable chunking to save RAM
+        self.chunk_size_value = 20000  # Moderate chunk size (balance speed vs memory)
+        self.parallel_var = ctk.BooleanVar(value=True)  # Keep parallel enabled
+        self.max_workers_value = 1  # Single worker to minimize RAM usage
         
         # Window configuration
         self.title(self.texts["title"])
