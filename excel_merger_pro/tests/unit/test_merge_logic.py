@@ -21,7 +21,7 @@ class TestMergeLogic(unittest.TestCase):
         df_b = pd.DataFrame({'val': [99]})
         
         # สอน Mock: ถ้าขออ่าน A ให้เอา df_a ไป, ถ้าขอ B ให้เอา df_b ไป
-        def side_effect(path, sheet):
+        def side_effect(path, sheet, usecols=None):
             if sheet.value == "SheetA": return df_a
             if sheet.value == "SheetB": return df_b
             return pd.DataFrame()
