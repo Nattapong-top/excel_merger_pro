@@ -70,8 +70,21 @@ class MergeService:
         result = pd.concat(all_data_frames, ignore_index=True)
         self.logger.info(f"Concatenated {len(all_data_frames)} DataFrames")
         
+        # Report progress: file reading complete, starting data transformations
+        if self.progress_callback:
+            state = ProgressState(
+                current_file="Data transformations",
+                files_completed=len(files),
+                total_files=len(files),
+                rows_processed=len(result),
+                total_rows=len(result),
+                percentage=95.0,  # 95% - almost done
+                estimated_seconds_remaining=0.0
+            )
+            self.progress_callback.on_progress(state)
+        
         # Apply data processors
-        result = self._apply_processors(result, options)
+        result = self._apply_processors(result, options, files)
         
         self.logger.info(f"Merge complete. Total rows: {len(result)}")
         return result
@@ -145,7 +158,22 @@ class MergeService:
                 else:
                     df = self.reader.read_sheet(file.path, sheet)
                 
-                # Add origin tracking
+                # Remove empty rows BEFORE adding origin tracking columns
+                # This ensures we check the actual data columns, not the metadata columns
+                initial_rows = len(df)
+                df = df.dropna(how='all')  # Drop rows where ALL columns are NaN
+                df = df.reset_index(drop=True)  # Reset index after dropping
+                
+                removed_rows = initial_rows - len(df)
+                if removed_rows > 0:
+                    self.logger.info(f"    Removed {removed_rows} empty row(s)")
+                
+                # Skip if no data remains after removing empty rows
+                if df.empty:
+                    self.logger.info(f"    Sheet {sheet.value} is empty after removing blank rows, skipping")
+                    continue
+                
+                # Add origin tracking AFTER removing empty rows
                 df['Origin_File'] = file.path.value
                 df['Origin_Sheet'] = sheet.value
                 
@@ -183,7 +211,8 @@ class MergeService:
     def _apply_processors(
         self,
         df: Any,
-        options: ProcessingOptions
+        options: ProcessingOptions,
+        files: List[SourceFile]
     ) -> Any:
         """Apply data processors in sequence"""
         from src.infrastructure.data_processors import (
@@ -195,7 +224,7 @@ class MergeService:
         # Apply group by
         if options.group_by_config:
             self.logger.info("Applying group by processor")
-            processor = GroupByProcessor(options.group_by_config)
+            processor = GroupByProcessor(options.group_by_config, logger=self.logger)
             df = processor.process(df)
         
         # Apply duplicate removal
@@ -213,7 +242,35 @@ class MergeService:
                 raise ValueError(error_msg)
             
             self.logger.info("Applying column selection")
-            processor = ColumnSelector(options.column_selection_config)
+            processor = ColumnSelector(options.column_selection_config, logger=self.logger)
             df = processor.process(df)
+            
+            # Remove rows where all selected columns (excluding Origin columns) are empty
+            # This handles cases where files don't have the selected columns
+            selected_cols = list(options.column_selection_config.selected_columns)
+            data_cols = [col for col in selected_cols if col in df.columns]
+            
+            if data_cols:
+                initial_rows = len(df)
+                # Drop rows where all data columns are NaN
+                df = df.dropna(subset=data_cols, how='all')
+                df = df.reset_index(drop=True)
+                
+                removed_rows = initial_rows - len(df)
+                if removed_rows > 0:
+                    self.logger.info(f"Removed {removed_rows} row(s) with no data in selected columns")
+        
+        # Report final progress
+        if self.progress_callback:
+            state = ProgressState(
+                current_file="Complete",
+                files_completed=len(files),
+                total_files=len(files),
+                rows_processed=len(df),
+                total_rows=len(df),
+                percentage=100.0,
+                estimated_seconds_remaining=0.0
+            )
+            self.progress_callback.on_progress(state)
         
         return df

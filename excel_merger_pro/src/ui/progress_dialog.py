@@ -135,6 +135,19 @@ class ProgressDialog(ctk.CTkToplevel):
                 self.eta_label.configure(text=eta_text)
             else:
                 self.eta_label.configure(text="Almost done...")
+        else:
+            # No progress state yet - show indeterminate progress
+            # This happens during data transformations (group by, column selection, etc.)
+            current_value = self.progress_bar.get()
+            if current_value >= 0.95:
+                # If we're at the end, show processing message
+                self.file_label.configure(text="Processing data transformations...")
+                self.eta_label.configure(text="Please wait...")
+                # Keep progress bar at current position
+            elif current_value == 0:
+                # Still initializing
+                self.file_label.configure(text="Initializing...")
+                self.eta_label.configure(text="Please wait...")
         
         # Schedule next update (500ms)
         if not self.cancelled:

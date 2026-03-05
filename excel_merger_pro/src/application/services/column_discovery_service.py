@@ -1,6 +1,6 @@
 """Column discovery service for identifying columns in source files."""
 
-from typing import List
+from typing import List, Optional
 import pandas as pd
 
 from ...domain.entities import SourceFile
@@ -19,16 +19,24 @@ class ColumnDiscoveryService:
     - Detect header rows
     """
     
-    def __init__(self, reader: ISheetReader, logger: ILogger):
+    def __init__(self, reader: ISheetReader, logger: Optional[ILogger] = None):
         """
         Initialize service with dependencies.
         
         Args:
             reader: Sheet reader for accessing Excel files
-            logger: Logger for operation tracking
+            logger: Logger for operation tracking (optional)
         """
         self.reader = reader
         self.logger = logger
+    
+    def _log(self, message: str):
+        """Log message if logger is available"""
+        if self.logger:
+            if hasattr(self.logger, 'log'):
+                self.logger.log(message)
+            elif hasattr(self.logger, 'info'):
+                self.logger.info(message)
     
     def discover_columns(self, files: List[SourceFile]) -> List[ColumnMetadata]:
         """
@@ -40,56 +48,59 @@ class ColumnDiscoveryService:
         Returns:
             List of unique columns with metadata
         """
-        self.logger.log("Starting column discovery...")
+        self._log("Starting column discovery...")
         
         column_map = {}  # {column_name: ColumnMetadata}
         
         for source_file in files:
             try:
-                # Read first few rows to detect columns
-                df_chunks = list(self.reader.read_sheet_chunked(
-                    source_file.path,
-                    source_file.selected_sheet,
-                    chunk_size=10
-                ))
-                
-                if not df_chunks:
-                    self.logger.log(f"Warning: No data in {source_file.path}")
-                    continue
-                
-                df = df_chunks[0]
-                
-                # Check if first row looks like a header
-                is_from_header = self._has_header_row(df)
-                
-                if is_from_header:
-                    # Use column names from DataFrame
-                    columns = list(df.columns)
-                else:
-                    # Generate letter-based column names
-                    columns = self._generate_letter_names(len(df.columns))
-                
-                # Add to column map
-                for col_name in columns:
-                    if col_name in column_map:
-                        # Add this file to existing column metadata
-                        if source_file.path not in column_map[col_name].source_files:
-                            column_map[col_name].source_files.append(source_file.path)
-                    else:
-                        # Create new column metadata
-                        column_map[col_name] = ColumnMetadata(
-                            name=col_name,
-                            source_files=[source_file.path],
-                            is_from_header=is_from_header,
-                            data_type=self._detect_data_type(df[col_name]) if is_from_header else None
+                # Read columns from each selected sheet
+                for sheet in source_file.selected_sheets:
+                    try:
+                        # Read just the header (first row)
+                        df = pd.read_excel(
+                            source_file.path.value,
+                            sheet_name=sheet.value,
+                            nrows=1,  # Read only first row
+                            engine='openpyxl'
                         )
+                        
+                        # Check if first row looks like a header
+                        is_from_header = self._has_header_row(df)
+                        
+                        if is_from_header:
+                            # Use column names from DataFrame
+                            columns = list(df.columns)
+                        else:
+                            # Generate letter-based column names
+                            columns = self._generate_letter_names(len(df.columns))
+                        
+                        # Add to column map
+                        for col_name in columns:
+                            col_name_str = str(col_name)  # Convert to string
+                            if col_name_str in column_map:
+                                # Add this file to existing column metadata
+                                file_path_str = str(source_file.path.value)
+                                if file_path_str not in column_map[col_name_str].source_files:
+                                    column_map[col_name_str].source_files.append(file_path_str)
+                            else:
+                                # Create new column metadata
+                                column_map[col_name_str] = ColumnMetadata(
+                                    name=col_name_str,
+                                    source_files=[str(source_file.path.value)],
+                                    is_from_header=is_from_header,
+                                    data_type=None  # We don't have enough data to detect type
+                                )
+                    except Exception as e:
+                        self._log(f"Error reading sheet {sheet.value}: {e}")
+                        continue
                 
             except Exception as e:
-                self.logger.log(f"Error reading {source_file.path}: {e}")
+                self._log(f"Error reading {source_file.path.value}: {e}")
                 continue
         
         result = list(column_map.values())
-        self.logger.log(f"Discovered {len(result)} unique columns")
+        self._log(f"Discovered {len(result)} unique columns")
         
         return result
     

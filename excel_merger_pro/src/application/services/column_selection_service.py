@@ -17,16 +17,24 @@ class ColumnSelectionService:
     - Apply default selections
     """
     
-    def __init__(self, repository: IConfigurationRepository, logger: ILogger):
+    def __init__(self, repository: IConfigurationRepository, logger: Optional[ILogger] = None):
         """
         Initialize service with dependencies.
         
         Args:
             repository: Repository for persisting configurations
-            logger: Logger for operation tracking
+            logger: Logger for operation tracking (optional)
         """
         self.repository = repository
         self.logger = logger
+    
+    def _log(self, message: str):
+        """Log message if logger is available"""
+        if self.logger:
+            if hasattr(self.logger, 'log'):
+                self.logger.log(message)
+            elif hasattr(self.logger, 'info'):
+                self.logger.info(message)
     
     def create_config(
         self,
@@ -46,7 +54,7 @@ class ColumnSelectionService:
         Raises:
             ValueError: If configuration is invalid
         """
-        self.logger.log(f"Creating config with {len(selected_columns)} columns")
+        self._log(f"Creating config with {len(selected_columns)} columns")
         
         # ColumnSelectionConfig will validate itself
         config = ColumnSelectionConfig(
@@ -64,9 +72,9 @@ class ColumnSelectionService:
             config: Configuration to save
             name: Name for the configuration
         """
-        self.logger.log(f"Saving configuration '{name}'")
+        self._log(f"Saving configuration '{name}'")
         self.repository.save(config, name)
-        self.logger.log(f"Configuration '{name}' saved successfully")
+        self._log(f"Configuration '{name}' saved successfully")
     
     def load_config(self, name: str) -> ColumnSelectionConfig:
         """
@@ -81,9 +89,9 @@ class ColumnSelectionService:
         Raises:
             FileNotFoundError: If configuration not found
         """
-        self.logger.log(f"Loading configuration '{name}'")
+        self._log(f"Loading configuration '{name}'")
         config = self.repository.load(name)
-        self.logger.log(f"Configuration '{name}' loaded successfully")
+        self._log(f"Configuration '{name}' loaded successfully")
         return config
     
     def get_default_config(self, available_columns: List[str]) -> ColumnSelectionConfig:
@@ -96,7 +104,7 @@ class ColumnSelectionService:
         Returns:
             Default configuration with all columns selected
         """
-        self.logger.log(f"Creating default config with {len(available_columns)} columns")
+        self._log(f"Creating default config with {len(available_columns)} columns")
         
         return ColumnSelectionConfig(
             selected_columns=tuple(available_columns),
@@ -127,10 +135,10 @@ class ColumnSelectionService:
         ]
         
         if not filtered_columns:
-            self.logger.log("Warning: No columns from config are available")
+            self._log("Warning: No columns from config are available")
             return None
         
-        self.logger.log(
+        self._log(
             f"Filtered config: {len(filtered_columns)}/{len(config.selected_columns)} columns available"
         )
         

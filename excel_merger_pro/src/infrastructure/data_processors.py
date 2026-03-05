@@ -24,14 +24,16 @@ class GroupByProcessor(IDataProcessor):
     Supports: sum, count, mean, min, max, first, last
     """
     
-    def __init__(self, config: GroupByConfig):
+    def __init__(self, config: GroupByConfig, logger=None):
         """
         Initialize with group by configuration
         
         Args:
             config: GroupByConfig with group columns and aggregations
+            logger: Optional logger for progress reporting
         """
         self.config = config
+        self.logger = logger
     
     def process(self, df: Any) -> Any:
         """
@@ -45,6 +47,10 @@ class GroupByProcessor(IDataProcessor):
         """
         import pandas as pd
         import numpy as np
+        
+        if self.logger:
+            self.logger.info(f"Starting group by operation on {len(df)} rows...")
+            self.logger.info(f"Group by columns: {', '.join(self.config.group_columns)}")
         
         # Group by specified columns
         group_cols = list(self.config.group_columns)
@@ -65,6 +71,11 @@ class GroupByProcessor(IDataProcessor):
                         df[col] = pd.to_numeric(df[col], errors='coerce')
                     
                     agg_dict[col] = func
+                    if self.logger:
+                        self.logger.info(f"  - Aggregating column '{col}' with function '{func}'")
+        
+        if self.logger:
+            self.logger.info("Performing grouping operation...")
         
         # Perform grouping
         grouped = df.groupby(group_cols, as_index=False)
@@ -79,11 +90,16 @@ class GroupByProcessor(IDataProcessor):
         # If user wanted to count rows in each group
         if count_column:
             # Add count column
+            if self.logger:
+                self.logger.info(f"Adding row count for each group...")
             count_result = df.groupby(group_cols).size().reset_index(name=f'{count_column}_count')
             if not result.empty:
                 result = result.merge(count_result, on=group_cols, how='left')
             else:
                 result = count_result
+        
+        if self.logger:
+            self.logger.info(f"Group by complete. Reduced from {len(df)} to {len(result)} rows")
         
         return result
     
@@ -137,14 +153,16 @@ class ColumnSelector(IDataProcessor):
     Filters to selected columns and applies specified order
     """
 
-    def __init__(self, config: ColumnSelectionConfig):
+    def __init__(self, config: ColumnSelectionConfig, logger=None):
         """
         Initialize with column selection configuration
 
         Args:
             config: ColumnSelectionConfig with selected columns and order
+            logger: Optional logger for progress reporting
         """
         self.config = config
+        self.logger = logger
 
     def process(self, df: Any) -> Any:
         """
@@ -156,31 +174,55 @@ class ColumnSelector(IDataProcessor):
         Returns:
             DataFrame with selected columns in specified order
         """
-        return self.apply_selection(df, self.config)
+        if self.logger:
+            self.logger.info(f"Selecting {len(self.config.selected_columns)} columns from {len(df.columns)} available columns")
+        
+        result = self.apply_selection(df, self.config, self.logger)
+        
+        if self.logger:
+            self.logger.info(f"Column selection complete. Final columns: {len(result.columns)}")
+        
+        return result
 
     @staticmethod
-    def apply_selection(df: pd.DataFrame, config: ColumnSelectionConfig) -> pd.DataFrame:
+    def apply_selection(df: pd.DataFrame, config: ColumnSelectionConfig, logger=None) -> pd.DataFrame:
         """
         Apply column selection and reordering to DataFrame.
 
         Creates empty columns for selected columns that don't exist in the DataFrame.
+        Automatically preserves Origin_File and Origin_Sheet columns if they exist.
 
         Args:
             df: Input pandas DataFrame
             config: ColumnSelectionConfig with selected columns and order
+            logger: Optional logger for progress reporting
 
         Returns:
-            DataFrame with selected columns in specified order
+            DataFrame with selected columns in specified order, plus origin tracking columns
         """
         result = df.copy()
 
         # Create empty columns for missing columns
+        missing_cols = []
         for col in config.column_order:
             if col not in result.columns:
                 result[col] = None
+                missing_cols.append(col)
+        
+        if logger and missing_cols:
+            logger.info(f"Created {len(missing_cols)} empty columns for missing data: {', '.join(missing_cols[:5])}{'...' if len(missing_cols) > 5 else ''}")
 
         # Select and reorder columns
-        result = result[list(config.column_order)]
+        selected_columns = list(config.column_order)
+        
+        # Automatically add Origin_File and Origin_Sheet at the end if they exist
+        # These are metadata columns that should always be preserved
+        if 'Origin_File' in result.columns and 'Origin_File' not in selected_columns:
+            selected_columns.append('Origin_File')
+        if 'Origin_Sheet' in result.columns and 'Origin_Sheet' not in selected_columns:
+            selected_columns.append('Origin_Sheet')
+        
+        result = result[selected_columns]
 
         return result
 

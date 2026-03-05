@@ -68,14 +68,14 @@ class TestMergeServiceWithColumnSelection:
         
         result = service.merge(files, options)
         
-        # Should have only selected columns (Origin columns are filtered out by column selection)
+        # Should have only selected columns PLUS Origin columns (added automatically)
         assert 'A' in result.columns
         assert 'C' in result.columns
         assert 'B' not in result.columns
         assert 'D' not in result.columns
-        # Column selection filters ALL columns not in the selection, including Origin columns
-        assert 'Origin_File' not in result.columns
-        assert 'Origin_Sheet' not in result.columns
+        # Origin columns are automatically preserved for tracking
+        assert 'Origin_File' in result.columns
+        assert 'Origin_Sheet' in result.columns
     
     def test_merge_with_column_selection_reorders_columns(self, spy_logger, mock_reader):
         """
