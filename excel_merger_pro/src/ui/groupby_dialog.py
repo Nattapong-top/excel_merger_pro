@@ -168,9 +168,9 @@ class GroupByConfigDialog(ctk.CTkToplevel):
             button_frame,
             text=self.texts["cancel"],
             command=self._on_cancel,
-            width=150,
-            height=40,
-            font=("Arial", 13),
+            width=200,
+            height=50,
+            font=("Arial", 15),
             fg_color="gray",
             hover_color="darkgray"
         ).pack(side="right", padx=5)
@@ -179,9 +179,9 @@ class GroupByConfigDialog(ctk.CTkToplevel):
             button_frame,
             text=self.texts["ok"],
             command=self._on_ok,
-            width=150,
-            height=40,
-            font=("Arial", 13, "bold"),
+            width=200,
+            height=50,
+            font=("Arial", 15, "bold"),
             fg_color="#2CC985",
             hover_color="#28B574"
         ).pack(side="right", padx=5)
