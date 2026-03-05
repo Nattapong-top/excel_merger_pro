@@ -92,13 +92,29 @@ class GroupByConfigDialog(ctk.CTkToplevel):
         group_frame.pack(fill="x", pady=(0, 20))
         
         self.group_vars = {}
-        for col in self.available_columns:
+        for idx, col in enumerate(self.available_columns, 1):
             var = ctk.BooleanVar(value=False)
+            
+            # Create frame for each row
+            row_frame = ctk.CTkFrame(group_frame, fg_color="transparent")
+            row_frame.pack(fill="x", padx=5, pady=2)
+            
+            # Row number label
+            ctk.CTkLabel(
+                row_frame,
+                text=f"{idx}.",
+                width=30,
+                font=("Arial", 11),
+                text_color="gray"
+            ).pack(side="left", padx=(5, 0))
+            
+            # Checkbox
             ctk.CTkCheckBox(
-                group_frame,
+                row_frame,
                 text=col,
                 variable=var
-            ).pack(anchor="w", padx=10, pady=2)
+            ).pack(side="left", padx=5)
+            
             self.group_vars[col] = var
         
         # Aggregation section
@@ -113,16 +129,28 @@ class GroupByConfigDialog(ctk.CTkToplevel):
         agg_frame.pack(fill="x", pady=(0, 20))
         
         self.agg_menus = {}
-        for col in self.available_columns:
-            row_frame = ctk.CTkFrame(agg_frame)
-            row_frame.pack(fill="x", padx=10, pady=5)
+        for idx, col in enumerate(self.available_columns, 1):
+            row_frame = ctk.CTkFrame(agg_frame, fg_color="transparent")
+            row_frame.pack(fill="x", padx=5, pady=5)
             
+            # Row number label
+            ctk.CTkLabel(
+                row_frame,
+                text=f"{idx}.",
+                width=30,
+                font=("Arial", 11),
+                text_color="gray"
+            ).pack(side="left", padx=(5, 0))
+            
+            # Column name label
             ctk.CTkLabel(
                 row_frame,
                 text=f"{col}:",
-                width=150
+                width=200,
+                anchor="w"
             ).pack(side="left", padx=5)
             
+            # Aggregation dropdown
             menu = ctk.CTkOptionMenu(
                 row_frame,
                 values=["None"] + self.AGG_FUNCTIONS,
