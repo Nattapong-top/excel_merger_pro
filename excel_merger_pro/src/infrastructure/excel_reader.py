@@ -33,16 +33,28 @@ class PandasSheetReader(ISheetReader):
                     # ลองหา header row ที่ถูกต้อง (skip merged cells)
                     header_row = self._find_header_row(path, sheet_name, engine)
                     
+                    # ลองอ่านด้วย usecols ก่อน (ถ้ามี)
                     if usecols:
-                        if self.logger:
-                            self.logger.info(f"    Reading only {len(usecols)} selected columns with {engine} engine")
-                        df = pd.read_excel(
-                            path.value, 
-                            sheet_name=sheet_name.value,
-                            engine=engine,
-                            usecols=usecols,
-                            header=header_row
-                        )
+                        try:
+                            if self.logger:
+                                self.logger.info(f"    Reading only {len(usecols)} selected columns with {engine} engine")
+                            df = pd.read_excel(
+                                path.value, 
+                                sheet_name=sheet_name.value,
+                                engine=engine,
+                                usecols=usecols,
+                                header=header_row
+                            )
+                        except (ValueError, KeyError) as e:
+                            # usecols ไม่ตรงกับ columns ในไฟล์ - อ่านทุก column แทน
+                            if self.logger:
+                                self.logger.info(f"    Selected columns not found in this file, reading all columns")
+                            df = pd.read_excel(
+                                path.value, 
+                                sheet_name=sheet_name.value,
+                                engine=engine,
+                                header=header_row
+                            )
                     else:
                         if self.logger:
                             self.logger.info(f"    Using {engine} engine for reading")
@@ -64,10 +76,17 @@ class PandasSheetReader(ISheetReader):
                     
                     return df
                     
-                except (ImportError, ValueError) as e:
+                except (ImportError, ValueError, Exception) as e:
                     # Engine ไม่มีหรือใช้ไม่ได้ ลองตัวถัดไป
                     last_error = e
-                    continue
+                    # ถ้าเป็น calamine error ให้ลอง openpyxl
+                    if engine == 'calamine':
+                        if self.logger:
+                            self.logger.info(f"    Calamine failed, trying openpyxl...")
+                        continue
+                    else:
+                        # openpyxl ก็ล้มเหลว
+                        raise
             
             # ถ้าทุก engine ล้มเหลว
             raise ValueError(f"Error reading sheet '{sheet_name.value}': {last_error}")
