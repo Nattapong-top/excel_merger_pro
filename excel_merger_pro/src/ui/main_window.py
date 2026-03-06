@@ -261,17 +261,30 @@ class MainWindow(ctk.CTk):
             
             reader = self._ensure_reader_initialized()
             
-            # สแกนหาไฟล์ Excel ทั้งหมดในโฟลเดอร์ (รวม subfolder)
+            # นับจำนวนไฟล์ก่อน
+            all_files = []
             for root, dirs, files in os.walk(folder_path):
                 for file in files:
+                    if file.startswith('~$'):
+                        continue
                     if file.endswith(('.xlsx', '.xls')):
-                        full_path = os.path.join(root, file)
-                        try:
-                            path = FilePath(full_path)
-                            sheets = reader.get_sheet_names(path)
-                            files_data[full_path] = sheets
-                        except Exception as e:
-                            print(f"Error loading {full_path}: {e}")
+                        all_files.append(os.path.join(root, file))
+            
+            total_files = len(all_files)
+            
+            # สแกนหาไฟล์ Excel ทั้งหมดในโฟลเดอร์ (รวม subfolder)
+            for idx, full_path in enumerate(all_files, 1):
+                # แสดง progress
+                self.after(0, lambda i=idx, t=total_files: self.status_label.configure(
+                    text=f"Scanning files... {i}/{t}"
+                ))
+                
+                try:
+                    path = FilePath(full_path)
+                    sheets = reader.get_sheet_names(path)
+                    files_data[full_path] = sheets
+                except Exception as e:
+                    print(f"Error loading {full_path}: {e}")
             
             if not files_data:
                 self.after(0, lambda: messagebox.showinfo("Info", f"No Excel files found in:\n{folder_path}"))

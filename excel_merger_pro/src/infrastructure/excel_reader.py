@@ -80,19 +80,19 @@ class PandasSheetReader(ISheetReader):
         หา header row ที่ถูกต้อง โดย skip แถวที่มี merged cells หรือ title rows
         
         กลยุทธ์:
-        1. อ่าน 10 แถวแรก
+        1. อ่าน 7 แถวแรก
         2. หาแถวที่มี column names มากที่สุดและไม่ซ้ำกัน
         3. ถ้าไม่เจอ ใช้แถว 0 (default)
         """
         import pandas as pd
         
         try:
-            # อ่าน 10 แถวแรกเพื่อหา header
+            # อ่าน 7 แถวแรกเพื่อหา header
             df_sample = pd.read_excel(
                 path.value,
                 sheet_name=sheet_name.value,
                 engine=engine,
-                nrows=10,
+                nrows=7,
                 header=None  # อ่านแบบไม่มี header
             )
             
@@ -100,7 +100,7 @@ class PandasSheetReader(ISheetReader):
             best_row = 0
             max_valid_cols = 0
             
-            for row_idx in range(min(10, len(df_sample))):
+            for row_idx in range(min(7, len(df_sample))):
                 row_data = df_sample.iloc[row_idx]
                 
                 # นับจำนวน column ที่ valid (ไม่ใช่ NaN, ไม่ว่าง, ไม่ซ้ำ)
@@ -253,8 +253,8 @@ class PandasSheetReader(ISheetReader):
         max_valid_cols = 0
         best_row = 0
         
-        # ตรวจสอบ 10 แถวแรก
-        for row_idx, row in enumerate(worksheet.iter_rows(max_row=10, values_only=True)):
+        # ตรวจสอบ 7 แถวแรก
+        for row_idx, row in enumerate(worksheet.iter_rows(max_row=7, values_only=True)):
             # นับจำนวน column ที่ valid
             valid_cols = [cell for cell in row if cell is not None and str(cell).strip() != '']
             unique_count = len(set(valid_cols))
