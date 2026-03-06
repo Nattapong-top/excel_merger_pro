@@ -7,7 +7,7 @@ import shutil
 ctk_path = os.path.dirname(customtkinter.__file__)
 
 # 2. ตั้งชื่อไฟล์ .exe
-exe_name = "Merge Excel Pro - By Paa Top IT v2"
+exe_name = "Merge Excel Pro - By Paa Top IT v3"
 
 print(f"🚀 Start building: {exe_name}...")
 print(f"📦 CustomTkinter path found: {ctk_path}")

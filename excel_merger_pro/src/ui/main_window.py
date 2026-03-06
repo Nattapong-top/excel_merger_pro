@@ -2,23 +2,11 @@ import customtkinter as ctk
 from tkinter import filedialog, messagebox
 import os
 import threading
-import subprocess
-import platform
-import gc  # ใช้สำหรับคืนแรม
-from datetime import datetime
 
-# --- Import DDD Modules ---
+# --- Import DDD Modules (only essential ones at startup) ---
 from src.domain.value_objects import FilePath, SheetName
 from src.domain.entities import SourceFile
-from src.infrastructure.excel_reader import PandasSheetReader
-from src.infrastructure.gui_logger import GuiLogger
-from src.application.services import MergeService
-from src.ui.dialogs import SheetSelectionDialog, MultiFileSheetSelectionDialog
-from src.ui.processing_options_dialog import ProcessingOptionsDialog
-from src.ui.progress_dialog import ProgressDialog
 from src.application.interfaces import ILogger
-from src.infrastructure.progress_tracker import ThreadSafeProgressTracker
-from src.domain.processing_options import ProcessingOptions
 
 ctk.set_appearance_mode("System")
 ctk.set_default_color_theme("blue")
@@ -44,11 +32,10 @@ class MainWindow(ctk.CTk):
         self.last_save_path = ""
         self.lang_code = "en"
         
-        # --- Backend Setup ---
-        self.reader = PandasSheetReader()  # Will be updated with logger during merge
-        # เริ่มต้นใช้ Logger ปลอมไปก่อน (เพราะยังไม่มีการ merge)
+        # --- Backend Setup (Lazy initialization) ---
+        self.reader = None  # Will be created when needed
+        self.service = None  # Will be created when needed
         self.dummy_logger = DummyLogger()
-        self.service = MergeService(logger=self.dummy_logger, reader=self.reader)
 
         # --- Language Dictionary ---
         self.texts = {
@@ -87,6 +74,13 @@ class MainWindow(ctk.CTk):
 
         self.create_widgets()
         self.update_language_ui()
+
+    def _ensure_reader_initialized(self):
+        """Lazy initialization of reader - only create when needed"""
+        if self.reader is None:
+            from src.infrastructure.excel_reader import PandasSheetReader
+            self.reader = PandasSheetReader()
+        return self.reader
 
     def create_widgets(self):
         # 1. Header
@@ -140,6 +134,12 @@ class MainWindow(ctk.CTk):
         # 5. Status Bar
         self.status_label = ctk.CTkLabel(self, text="Ready...", anchor="w", text_color="gray")
         self.status_label.grid(row=2, column=0, sticky="ew", padx=20, pady=(0, 10))
+    def _ensure_reader_initialized(self):
+        """Lazy initialization of reader - only create when needed"""
+        if self.reader is None:
+            from src.infrastructure.excel_reader import PandasSheetReader
+            self.reader = PandasSheetReader()
+        return self.reader
     
     def _setup_textbox_copy_menu(self):
         """Setup right-click menu for copy functionality"""
@@ -213,10 +213,12 @@ class MainWindow(ctk.CTk):
             self.status_label.configure(text="Scanning files...")
             files_data = {}  # {file_path: [SheetName1, SheetName2, ...]}
             
+            reader = self._ensure_reader_initialized()
+            
             for path_str in file_paths:
                 try:
                     path = FilePath(path_str)
-                    sheets = self.reader.get_sheet_names(path)
+                    sheets = reader.get_sheet_names(path)
                     files_data[path_str] = sheets
                 except Exception as e:
                     print(f"Error: {e}")
@@ -231,6 +233,8 @@ class MainWindow(ctk.CTk):
 
     def show_multi_file_selection_dialog(self, files_data):
         """แสดง Dialog สำหรับเลือก Sheet จากหลายไฟล์พร้อมกัน"""
+        from src.ui.dialogs import MultiFileSheetSelectionDialog
+        
         dialog = MultiFileSheetSelectionDialog(self, files_data, lang_code=self.lang_code)
         selected_data = dialog.get_selected()
         
@@ -255,6 +259,8 @@ class MainWindow(ctk.CTk):
             self.status_label.configure(text="Scanning folder...")
             files_data = {}  # {file_path: [SheetName1, SheetName2, ...]}
             
+            reader = self._ensure_reader_initialized()
+            
             # สแกนหาไฟล์ Excel ทั้งหมดในโฟลเดอร์ (รวม subfolder)
             for root, dirs, files in os.walk(folder_path):
                 for file in files:
@@ -262,7 +268,7 @@ class MainWindow(ctk.CTk):
                         full_path = os.path.join(root, file)
                         try:
                             path = FilePath(full_path)
-                            sheets = self.reader.get_sheet_names(path)
+                            sheets = reader.get_sheet_names(path)
                             files_data[full_path] = sheets
                         except Exception as e:
                             print(f"Error loading {full_path}: {e}")
@@ -296,20 +302,22 @@ class MainWindow(ctk.CTk):
             first_file = self.source_files[0]
             if first_file.selected_sheets:
                 first_sheet = first_file.selected_sheets[0]
-                # Read just the header (first row)
-                import pandas as pd
-                df_header = pd.read_excel(
-                    first_file.path.value,
-                    sheet_name=first_sheet.value,
-                    nrows=0,  # Read only header
-                    engine='openpyxl'
+                
+                # ใช้ reader ที่มี logic หา header row อัตโนมัติ
+                reader = self._ensure_reader_initialized()
+                df_sample = reader.read_sheet(
+                    first_file.path,
+                    first_sheet
                 )
-                available_columns = list(df_header.columns)
+                available_columns = list(df_sample.columns)
         except Exception as e:
             print(f"Warning: Could not read columns from first file: {e}")
             available_columns = []
 
         # 2. Show processing options dialog with available columns
+        from src.ui.processing_options_dialog import ProcessingOptionsDialog
+        from datetime import datetime
+        
         options_dialog = ProcessingOptionsDialog(
             self, 
             available_columns=available_columns,
@@ -346,6 +354,8 @@ class MainWindow(ctk.CTk):
         self.status_label.configure(text=t["status_processing"])
 
         # 5. Create progress tracker (no dialog - show in status bar instead)
+        from src.infrastructure.progress_tracker import ThreadSafeProgressTracker
+        
         progress_tracker = ThreadSafeProgressTracker()
         
         # Update status bar with progress
@@ -365,16 +375,22 @@ class MainWindow(ctk.CTk):
         # 6. Run merge in background thread
         def run():
             try:
+                # Lazy import heavy modules
+                from src.infrastructure.gui_logger import GuiLogger
+                from src.application.services import MergeService
+                import gc
+                
                 # Create GUI logger
                 real_logger = GuiLogger(self.file_list_display)
                 
-                # Update reader with logger
-                self.reader.logger = real_logger
+                # Ensure reader is initialized and update with logger
+                reader = self._ensure_reader_initialized()
+                reader.logger = real_logger
                 
                 # Create service with progress tracking
                 service = MergeService(
                     logger=real_logger,
-                    reader=self.reader,
+                    reader=reader,
                     progress_callback=progress_tracker
                 )
                 
@@ -466,6 +482,9 @@ class MainWindow(ctk.CTk):
 
     def open_folder_action(self):
         if self.last_save_path and os.path.exists(self.last_save_path):
+            import subprocess
+            import platform
+            
             folder_path = os.path.dirname(self.last_save_path)
             if platform.system() == "Windows": os.startfile(folder_path)
             else: subprocess.Popen(["open" if platform.system() == "Darwin" else "xdg-open", folder_path])
